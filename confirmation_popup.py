@@ -20,7 +20,8 @@ class ConfirmationPopup:
         self.opacity = opacity
         self.window = None
         self.result = None
-        self.is_security_risk = self._check_security_risk()
+        # 민감 정보 감지 (클립보드 데이터에서 직접 가져오기)
+        self.is_security_risk = clipboard_data.get("is_sensitive", False) or self._check_security_risk()
     
     def _check_security_risk(self) -> bool:
         """보안 위험 패턴 감지"""
@@ -79,8 +80,12 @@ class ConfirmationPopup:
         header_frame.pack_propagate(False)
         
         # 아이콘과 제목 (보안 위험 시 경고 표시)
-        title_text = "⚠️ Security Alert" if self.is_security_risk else "🔒 Paste Request"
-        title_color = "#DC2626" if self.is_security_risk else "#3B82F6"
+        if self.is_security_risk:
+            title_text = "⚠️ Sensitive Data Detected!"
+            title_color = "#DC2626"
+        else:
+            title_text = "🔒 Paste Request"
+            title_color = "#3B82F6"
         
         title_label = ctk.CTkLabel(
             header_frame,
@@ -89,6 +94,17 @@ class ConfirmationPopup:
             text_color=title_color
         )
         title_label.pack(side="left", padx=15, pady=10)
+        
+        # 보안 경고 추가 메시지
+        if self.is_security_risk:
+            warning_label = ctk.CTkLabel(
+                main_frame,
+                text="⚠️ This content may contain sensitive information (email, phone, card number)",
+                font=("Segoe UI", 10),
+                text_color="#EF4444",
+                wraplength=400
+            )
+            warning_label.pack(padx=15, pady=(5, 0), anchor="w")
         
         # 프로세스 정보
         process_label = ctk.CTkLabel(
@@ -278,9 +294,9 @@ class ConfirmationPopup:
         self.close()
     
     def _animate_show(self):
-        """팝업 페이드인 애니메이션 (0.1초)"""
-        steps = 10
-        delay = 10  # ms
+        """팝업 페이드인 애니메이션 (0.15초)"""
+        steps = 15
+        delay = 10  # ms (총 150ms = 0.15초)
         increment = self.opacity / steps
         
         def fade_step(current_alpha, step):

@@ -5,7 +5,13 @@ SaaS 대시보드 스타일의 설정 인터페이스
 import customtkinter as ctk
 from config_manager import ConfigManager
 from typing import Callable
-
+import os
+import win32api
+import win32con
+import win32ui
+import win32gui
+from PIL import Image
+import io
 
 class SettingsWindow:
     """설정 창 클래스"""
@@ -461,7 +467,7 @@ class SettingsWindow:
                 self._create_whitelist_item(process)
     
     def _create_whitelist_item(self, process_name):
-        """화이트리스트 항목 생성"""
+        """화이트리스트 항목 생성 (앱 아이콘 포함)"""
         item_frame = ctk.CTkFrame(
             self.whitelist_container,
             fg_color="#2D2D2D",
@@ -471,15 +477,35 @@ class SettingsWindow:
         item_frame.pack(fill="x", padx=5, pady=5)
         item_frame.pack_propagate(False)
         
+        # 아이콘 추출 시도
+        icon_label = None
+        try:
+            icon_image = self._extract_process_icon(process_name)
+            if icon_image:
+                ctk_image = ctk.CTkImage(
+                    light_image=icon_image,
+                    dark_image=icon_image,
+                    size=(24, 24)
+                )
+                icon_label = ctk.CTkLabel(
+                    item_frame,
+                    image=ctk_image,
+                    text=""
+                )
+                icon_label.pack(side="left", padx=(15, 5), pady=10)
+        except:
+            pass
+        
         # 프로세스 이름
+        prefix = "" if icon_label else "📦 "
         name_label = ctk.CTkLabel(
             item_frame,
-            text=f"📦 {process_name}",
+            text=f"{prefix}{process_name}",
             font=("Segoe UI", 12),
             text_color="#FFFFFF",
             anchor="w"
         )
-        name_label.pack(side="left", padx=15, pady=10)
+        name_label.pack(side="left", padx=(5 if icon_label else 15, 10), pady=10)
         
         # 삭제 버튼
         delete_btn = ctk.CTkButton(
@@ -494,6 +520,59 @@ class SettingsWindow:
             command=lambda: self._remove_whitelist_item(process_name)
         )
         delete_btn.pack(side="right", padx=10, pady=10)
+    
+    def _extract_process_icon(self, process_name: str) -> Image.Image:
+        """프로세스 실행 파일에서 아이콘 추출"""
+        try:
+            # 일반적인 프로그램 경로들
+            search_paths = [
+                os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'), '**', process_name),
+                os.path.join(os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'), '**', process_name),
+                os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), '**', process_name),
+                os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', '**', process_name),
+            ]
+            
+            # 실행 파일 찾기
+            import glob
+            exe_path = None
+            for path_pattern in search_paths:
+                matches = glob.glob(path_pattern, recursive=True)
+                if matches:
+                    exe_path = matches[0]
+                    break
+            
+            if not exe_path:
+                return None
+            
+            # 아이콘 추출
+            ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+            
+            large, small = win32gui.ExtractIconEx(exe_path, 0)
+            if large:
+                win32gui.DestroyIcon(large[0])
+            if small:
+                hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                hbmp = win32ui.CreateBitmap()
+                hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
+                hdc = hdc.CreateCompatibleDC()
+                hdc.SelectObject(hbmp)
+                hdc.DrawIcon((0, 0), small[0])
+                
+                bmpstr = hbmp.GetBitmapBits(True)
+                img = Image.frombuffer(
+                    'RGB',
+                    (ico_x, ico_y),
+                    bmpstr, 'raw', 'BGRX', 0, 1
+                )
+                
+                win32gui.DestroyIcon(small[0])
+                return img
+            
+        except Exception as e:
+            print(f"아이콘 추출 실패 ({process_name}): {e}")
+        
+        return None
     
     def _remove_whitelist_item(self, process_name):
         """화이트리스트 항목 제거"""

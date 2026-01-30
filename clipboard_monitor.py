@@ -103,22 +103,43 @@ class ClipboardMonitor:
                 return {
                     "type": "image",
                     "content": image,
-                    "preview": self._create_image_preview(image)
+                    "preview": self._create_image_preview(image),
+                    "is_sensitive": False
                 }
             
             # 텍스트 확인
             text = pyperclip.paste()
             if text:
+                is_sensitive = self._check_sensitive_data(text)
                 return {
                     "type": "text",
                     "content": text,
-                    "preview": text[:200] + ("..." if len(text) > 200 else "")
+                    "preview": text[:200] + ("..." if len(text) > 200 else ""),
+                    "is_sensitive": is_sensitive
                 }
             
         except Exception as e:
             print(f"클립보드 데이터 가져오기 실패: {e}")
         
         return None
+    
+    def _check_sensitive_data(self, text: str) -> bool:
+        """민감 정보 패턴 감지 (이메일, 전화번호, 카드번호)"""
+        import re
+        
+        patterns = [
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # 이메일
+            r'\b\d{2,4}[-.]?\d{3,4}[-.]?\d{4}\b',  # 전화번호
+            r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b',  # 카드번호
+            r'\b\d{6}[-]?\d{7}\b',  # 주민등록번호
+        ]
+        
+        for pattern in patterns:
+            if re.search(pattern, text):
+                print(f"⚠️ 민감 정보 감지: {pattern}")
+                return True
+        
+        return False
     
     def _create_image_preview(self, image: Image.Image) -> Image.Image:
         """이미지 미리보기 생성 (썸네일)"""
