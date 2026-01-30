@@ -6,7 +6,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 from typing import Callable, Optional
 import tkinter as tk
-
+import re
 
 class ConfirmationPopup:
     """붙여넣기 확인 팝업 창"""
@@ -20,6 +20,24 @@ class ConfirmationPopup:
         self.opacity = opacity
         self.window = None
         self.result = None
+        self.is_security_risk = self._check_security_risk()
+    
+    def _check_security_risk(self) -> bool:
+        """보안 위험 패턴 감지"""
+        if self.clipboard_data.get("type") != "text":
+            return False
+        
+        content = self.clipboard_data.get("content", "")
+        
+        # 이메일 패턴
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        # 카드번호 패턴 (16자리 숫자, 하이픈 포함 가능)
+        card_pattern = r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'
+        
+        if re.search(email_pattern, content) or re.search(card_pattern, content):
+            return True
+        
+        return False
         
     def show(self):
         """팝업 창 표시"""
@@ -28,7 +46,7 @@ class ConfirmationPopup:
         
         # 창 설정
         self.window.attributes('-topmost', True)
-        self.window.attributes('-alpha', self.opacity)
+        self.window.attributes('-alpha', 0.0)  # 초기에는 투명하게
         self.window.overrideredirect(True)  # 타이틀바 제거
         
         # 배경색
@@ -37,13 +55,16 @@ class ConfirmationPopup:
         # 마우스 위치 가져오기
         x, y = self.window.winfo_pointerx(), self.window.winfo_pointery()
         
+        # 보안 위험 감지 시 빨간색 테두리
+        border_color = "#DC2626" if self.is_security_risk else "#3B82F6"
+        
         # 메인 프레임
         main_frame = ctk.CTkFrame(
             self.window,
             fg_color="#1E1E1E",
             corner_radius=10,
             border_width=2,
-            border_color="#3B82F6"
+            border_color=border_color
         )
         main_frame.pack(padx=0, pady=0, fill="both", expand=True)
         
@@ -57,12 +78,15 @@ class ConfirmationPopup:
         header_frame.pack(padx=15, pady=(15, 10), fill="x")
         header_frame.pack_propagate(False)
         
-        # 아이콘과 제목
+        # 아이콘과 제목 (보안 위험 시 경고 표시)
+        title_text = "⚠️ Security Alert" if self.is_security_risk else "🔒 Paste Request"
+        title_color = "#DC2626" if self.is_security_risk else "#3B82F6"
+        
         title_label = ctk.CTkLabel(
             header_frame,
-            text="🔒 Paste Request",
+            text=title_text,
             font=("Segoe UI", 16, "bold"),
-            text_color="#3B82F6"
+            text_color=title_color
         )
         title_label.pack(side="left", padx=15, pady=10)
         
@@ -144,6 +168,9 @@ class ConfirmationPopup:
         
         # 포커스 설정
         self.window.focus_force()
+        
+        # 페이드인 애니메이션
+        self._animate_show()
         
     def _create_text_preview(self, parent):
         """텍스트 미리보기 생성"""
@@ -249,6 +276,20 @@ class ConfirmationPopup:
         self.result = "cancel"
         self.on_cancel()
         self.close()
+    
+    def _animate_show(self):
+        """팝업 페이드인 애니메이션 (0.1초)"""
+        steps = 10
+        delay = 10  # ms
+        increment = self.opacity / steps
+        
+        def fade_step(current_alpha, step):
+            if step < steps and self.window and self.window.winfo_exists():
+                new_alpha = min(current_alpha + increment, self.opacity)
+                self.window.attributes('-alpha', new_alpha)
+                self.window.after(delay, lambda: fade_step(new_alpha, step + 1))
+        
+        fade_step(0.0, 0)
     
     def close(self):
         """팝업 창 닫기"""

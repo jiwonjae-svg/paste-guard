@@ -43,6 +43,7 @@ class ClipboardMonitor:
         
         # 모든 후킹 해제
         try:
+            keyboard.unhook_all_hotkeys()
             keyboard.unhook_all()
         except:
             pass

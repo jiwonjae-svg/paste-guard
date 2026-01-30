@@ -147,8 +147,14 @@ class PasteGuardian:
         self.ui_queue.put(show_popup)
     
     def _show_confirmation_popup(self, clipboard_data: dict, process_name: str):
-        """확인 팝업 표시"""
+        """확인 팝업 표시 (반드시 메인 스레드에서 실행)"""
         print("확인 팝업 생성 중...")
+        
+        # 메인 스레드가 아니면 UI 큐에 추가
+        if threading.current_thread() != threading.main_thread():
+            print("백그라운드 스레드에서 호출됨 - UI 큐로 전달")
+            self.ui_queue.put(lambda: self._show_confirmation_popup(clipboard_data, process_name))
+            return
         
         if self.current_popup:
             self.current_popup.close()
