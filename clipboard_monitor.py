@@ -26,6 +26,8 @@ class ClipboardMonitor:
         self.last_clipboard_content = None
         self.paste_pending = False  # 붙여넣기 대기 중
         self.pending_data = None    # 대기 중인 데이터
+        self._allow_next_paste = False  # 다음 붙여넣기 허용 플래그 (무한 루프 방지)
+        self._processing = False  # 처리 중 플래그
         
     def start(self):
         """모니터링 시작"""
@@ -54,9 +56,27 @@ class ClipboardMonitor:
         """Ctrl+V 핫키 콜백 - 붙여넣기 차단 및 확인 요청"""
         if not self.running:
             return
-            
+        
+        # 무한 루프 방지: 승인된 붙여넣기면 통과
+        if self._allow_next_paste:
+            print("✓ 승인된 붙여넣기 통과")
+            self._allow_next_paste = False
+            # suppress=True에도 불구하고 이미 차단되었으므로 여기서는 아무것도 하지 않음
+            return
+        
+        # 중복 처리 방지
+        if self._processing:
+            print("⚠️ 이미 처리 중...")
+            return
+        
+        self._processing = True
         print("Ctrl+V 감지됨! (차단됨)")
-        self._handle_paste_attempt()
+        
+        try:
+            # 붙여넣기 시도 처리
+            self._handle_paste_attempt()
+        finally:
+            self._processing = False
     
     def _handle_paste_attempt(self):
         """붙여넣기 시도 처리"""
@@ -168,3 +188,91 @@ class ClipboardMonitor:
             
         except Exception as e:
             print(f"붙여넣기 수행 실패: {e}")
+    
+    @staticmethod
+    def perform_paste_with_focus(content: str, content_type: str = "text", image_data=None):
+        """포커스 복원을 통한 실제 붙여넣기 수행 (텍스트 및 이미지 지원)"""
+        try:
+            # 1. 클립보드에 내용 설정
+            if content_type == "text":
+                pyperclip.copy(content)
+            elif content_type == "image" and image_data:
+                # win32clipboard를 사용한 이미지 처리
+                ClipboardMonitor._set_clipboard_image(image_data)
+            
+            # 2. 현재 활성 윈도우 가져오기 (붙여넣기 대상)
+            target_hwnd = win32gui.GetForegroundWindow()
+            
+            # 3. 팝업이 닫히고 포커스가 복원될 시간 대기
+            time.sleep(0.15)
+            
+            # 4. 타겟 윈도우에 강제 포커스 설정
+            if target_hwnd:
+                try:
+                    win32gui.SetForegroundWindow(target_hwnd)
+                    time.sleep(0.05)  # 포커스 안정화
+                except:
+                    pass
+            
+            # 5. 실제 붙여넣기 명령 전송
+            keyboard.press_and_release('ctrl+v')
+            
+            print(f"✓ 포커스 복원 붙여넣기 실행됨 ({content_type})")
+            
+        except Exception as e:
+            print(f"포커스 복원 붙여넣기 실패: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    @staticmethod
+    def _set_clipboard_image(image):
+        """이미지를 win32clipboard를 사용하여 클립보드에 안정적으로 설정 (DIB 포맷)"""
+        try:
+            from PIL import Image
+            import io
+            
+            # PIL 이미지를 BMP 포맷으로 변환
+            output = io.BytesIO()
+            
+            # RGBA면 RGB로 변환 (투명도 제거)
+            if image.mode == 'RGBA':
+                # 흰색 배경으로 합성
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                background.paste(image, mask=image.split()[3])  # 알파 채널 사용
+                image = background
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # BMP 포맷으로 저장
+            image.save(output, 'BMP')
+            data = output.getvalue()[14:]  # BMP 헤더 제거 (14 바이트)
+            output.close()
+            
+            # 클립보드 열기 시도 (최대 3회)
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    win32clipboard.OpenClipboard()
+                    break
+                except:
+                    if attempt < max_retries - 1:
+                        time.sleep(0.05)
+                    else:
+                        raise
+            
+            # 클립보드 비우기 및 DIB 포맷으로 설정
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(win32con.CF_DIB, data)
+            win32clipboard.CloseClipboard()
+            
+            print("✓ 이미지를 클립보드에 안정적으로 설정했습니다")
+            
+        except Exception as e:
+            print(f"이미지 클립보드 설정 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            # 실패 시 클립보드 닫기
+            try:
+                win32clipboard.CloseClipboard()
+            except:
+                pass

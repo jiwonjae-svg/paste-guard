@@ -12,10 +12,11 @@ class ConfirmationPopup:
     """붙여넣기 확인 팝업 창"""
     
     def __init__(self, clipboard_data: dict, process_name: str, 
-                 on_confirm: Callable, on_cancel: Callable, opacity: float = 0.95):
+                 on_confirm: Callable, on_always_allow: Callable, on_cancel: Callable, opacity: float = 0.95):
         self.clipboard_data = clipboard_data
         self.process_name = process_name
         self.on_confirm = on_confirm
+        self.on_always_allow = on_always_allow
         self.on_cancel = on_cancel
         self.opacity = opacity
         self.window = None
@@ -106,12 +107,12 @@ class ConfirmationPopup:
             )
             warning_label.pack(padx=15, pady=(5, 0), anchor="w")
         
-        # 프로세스 정보
+        # 프로세스 정보 (상단 우측에 크게)
         process_label = ctk.CTkLabel(
             header_frame,
-            text=f"From: {self.process_name}",
-            font=("Segoe UI", 11),
-            text_color="#888888"
+            text=f"Target: {self.process_name}",
+            font=("Segoe UI", 13, "bold"),
+            text_color="#10B981"
         )
         process_label.pack(side="right", padx=15, pady=10)
         
@@ -129,14 +130,19 @@ class ConfirmationPopup:
         elif self.clipboard_data["type"] == "image":
             self._create_image_preview(content_frame)
         
-        # 버튼 프레임
+        # 버튼 프레임 (완벽한 균형 레이아웃)
         button_frame = ctk.CTkFrame(
             main_frame,
             fg_color="transparent"
         )
-        button_frame.pack(padx=15, pady=(10, 15), fill="x")
+        button_frame.pack(padx=20, pady=(10, 20), fill="x")
         
-        # 취소 버튼
+        # 3컬럼 Grid 레이아웃 (각 버튼이 동일한 비율로 확장)
+        button_frame.grid_columnconfigure(0, weight=1, uniform="button")
+        button_frame.grid_columnconfigure(1, weight=1, uniform="button")
+        button_frame.grid_columnconfigure(2, weight=1, uniform="button")
+        
+        # 취소 버튼 (Deny)
         cancel_btn = ctk.CTkButton(
             button_frame,
             text="✖ Deny",
@@ -144,23 +150,36 @@ class ConfirmationPopup:
             fg_color="#DC2626",
             hover_color="#B91C1C",
             corner_radius=10,
-            height=40,
-            font=("Segoe UI", 13, "bold")
+            height=45,
+            font=("Segoe UI", 12, "bold")
         )
-        cancel_btn.pack(side="left", padx=(0, 10), expand=True, fill="x")
+        cancel_btn.grid(row=0, column=0, padx=(0, 5), sticky="ew")
         
-        # 확인 버튼
+        # Always Allow 버튼
+        always_btn = ctk.CTkButton(
+            button_frame,
+            text="✓✓ Always Allow",
+            command=self._on_always_allow_click,
+            fg_color="#10B981",
+            hover_color="#059669",
+            corner_radius=10,
+            height=45,
+            font=("Segoe UI", 11, "bold")
+        )
+        always_btn.grid(row=0, column=1, padx=5, sticky="ew")
+        
+        # 확인 버튼 (Allow Once)
         confirm_btn = ctk.CTkButton(
             button_frame,
-            text="✓ Allow Paste",
+            text="✓ Allow Once",
             command=self._on_confirm_click,
             fg_color="#3B82F6",
             hover_color="#2563EB",
             corner_radius=10,
-            height=40,
-            font=("Segoe UI", 13, "bold")
+            height=45,
+            font=("Segoe UI", 12, "bold")
         )
-        confirm_btn.pack(side="right", padx=(10, 0), expand=True, fill="x")
+        confirm_btn.grid(row=0, column=2, padx=(5, 0), sticky="ew")
         
         # 창 크기 조정 및 위치 설정
         self.window.update_idletasks()
@@ -285,6 +304,12 @@ class ConfirmationPopup:
         """확인 버튼 클릭"""
         self.result = "confirm"
         self.on_confirm(self.clipboard_data)
+        self.close()
+    
+    def _on_always_allow_click(self):
+        """Always Allow 버튼 클릭"""
+        self.result = "always_allow"
+        self.on_always_allow(self.clipboard_data)
         self.close()
     
     def _on_cancel_click(self):

@@ -16,9 +16,10 @@ import io
 class SettingsWindow:
     """설정 창 클래스"""
     
-    def __init__(self, config_manager: ConfigManager, parent=None, on_close: Callable = None):
+    def __init__(self, config_manager: ConfigManager, parent=None, app=None, on_close: Callable = None):
         self.config = config_manager
         self.parent = parent
+        self.app = app  # 메인 애플리케이션 참조
         self.on_close = on_close
         self.window = None
         self.whitelist_items = []
@@ -30,6 +31,9 @@ class SettingsWindow:
             self.window.lift()
             self.window.attributes('-topmost', True)
             self.window.attributes('-topmost', False)
+            # 기존 창이 있으면 히스토리 새로고침
+            if hasattr(self, 'current_tab') and self.current_tab == 'history':
+                self.show_history_settings()
             return
             
         # 부모가 있으면 Toplevel, 없으면 CTk 사용
@@ -107,6 +111,7 @@ class SettingsWindow:
         self._create_menu_button(sidebar, "⚙️ General", self.show_general_settings)
         self._create_menu_button(sidebar, "📋 Monitoring", self.show_monitoring_settings)
         self._create_menu_button(sidebar, "✓ Whitelist", self.show_whitelist_settings)
+        self._create_menu_button(sidebar, "📜 History", self.show_history_settings)
         self._create_menu_button(sidebar, "🎨 Appearance", self.show_appearance_settings)
         
         # 하단 정보
@@ -145,6 +150,7 @@ class SettingsWindow:
     def show_general_settings(self):
         """일반 설정 탭"""
         self._clear_content()
+        self.current_tab = 'general'
         
         # 헤더
         header = ctk.CTkLabel(
@@ -183,6 +189,7 @@ class SettingsWindow:
     def show_monitoring_settings(self):
         """모니터링 설정 탭"""
         self._clear_content()
+        self.current_tab = 'monitoring'
         
         header = ctk.CTkLabel(
             self.content_frame,
@@ -221,6 +228,7 @@ class SettingsWindow:
     def show_whitelist_settings(self):
         """화이트리스트 설정 탭"""
         self._clear_content()
+        self.current_tab = 'whitelist'
         
         header = ctk.CTkLabel(
             self.content_frame,
@@ -286,9 +294,249 @@ class SettingsWindow:
         self.whitelist_container = list_frame
         self._refresh_whitelist()
     
+    def show_history_settings(self):
+        """히스토리 설정 탭"""
+        self._clear_content()
+        self.current_tab = 'history'  # 현재 탭 표시
+        
+        header = ctk.CTkLabel(
+            self.content_frame,
+            text="Clipboard History",
+            font=("Segoe UI", 24, "bold"),
+            text_color="#FFFFFF",
+            anchor="w"
+        )
+        header.pack(padx=30, pady=(30, 10), anchor="w")
+        
+        subtitle = ctk.CTkLabel(
+            self.content_frame,
+            text="Recent clipboard activities (latest 10 items)",
+            font=("Segoe UI", 12),
+            text_color="#888888",
+            anchor="w"
+        )
+        subtitle.pack(padx=30, pady=(0, 20), anchor="w")
+        
+        # 히스토리 카드
+        card = ctk.CTkFrame(
+            self.content_frame,
+            fg_color="#2D2D2D",
+            corner_radius=10
+        )
+        card.pack(padx=30, pady=10, fill="both", expand=True)
+        
+        # 히스토리 목록
+        list_frame = ctk.CTkScrollableFrame(
+            card,
+            fg_color="#1E1E1E",
+            corner_radius=10,
+            height=400
+        )
+        list_frame.pack(padx=20, pady=20, fill="both", expand=True)
+        
+        # 히스토리 데이터 가져오기
+        if self.app:
+            history = self.app.get_clipboard_history()
+            if not history:
+                empty_label = ctk.CTkLabel(
+                    list_frame,
+                    text="No clipboard history yet",
+                    font=("Segoe UI", 12),
+                    text_color="#666666"
+                )
+                empty_label.pack(pady=20)
+            else:
+                for item in history:
+                    self._create_history_item(list_frame, item)
+        else:
+            error_label = ctk.CTkLabel(
+                list_frame,
+                text="History data unavailable",
+                font=("Segoe UI", 12),
+                text_color="#666666"
+            )
+            error_label.pack(pady=20)
+    
+    def _create_history_item(self, parent, history_item):
+        """히스토리 항목 생성 - grid 레이아웃으로 완벽한 수평 정렬"""
+        import time
+        import pyperclip
+        from PIL import ImageTk
+        
+        # 메인 항목 프레임 (가변 높이 - 내용에 따라 자동 조절)
+        item_frame = ctk.CTkFrame(
+            parent,
+            fg_color="#2D2D2D",
+            corner_radius=10
+        )
+        item_frame.pack(fill="x", padx=5, pady=3)
+        # pack_propagate는 True로 유지 (기본값) - 내용물에 맞게 크기 조절
+        
+        # Grid 설정 (4컬럼: 아이콘 | 정보 | 콘텐츠 | 버튼) - minsize 제거하여 컴팩트하게
+        item_frame.grid_columnconfigure(0, weight=0)  # 아이콘 - minsize 제거
+        item_frame.grid_columnconfigure(1, weight=1)  # 앱 정보 - weight 조정
+        item_frame.grid_columnconfigure(2, weight=2)  # 콘텐츠
+        item_frame.grid_columnconfigure(3, weight=0)  # 버튼
+        item_frame.grid_rowconfigure(0, weight=0)  # weight=0으로 수직 확장 방지
+        
+        # === 컬럼 0: 아이콘 (상단 정렬) ===
+        type_icon = "📝" if history_item["type"] == "text" else "🖼️"
+        is_sensitive = history_item.get("is_sensitive", False)
+        
+        icon_label = ctk.CTkLabel(
+            item_frame,
+            text=type_icon,
+            font=("Segoe UI", 24),  # 폰트 크기 더 줄임 (28 -> 24)
+            text_color="#EF4444" if is_sensitive else "#3B82F6"
+        )
+        icon_label.grid(row=0, column=0, padx=(8, 3), pady=(5, 5), sticky="n")  # pady 극도로 최소화, sticky="n"
+        
+        # === 컬럼 1: 앱 정보 (프로그램명 + 시간 + 타겟) - 상단 정렬 ===
+        info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+        info_frame.grid(row=0, column=1, padx=5, pady=(5, 5), sticky="n")  # pady 극도로 최소화, sticky="n"
+        
+        app_name = history_item.get("app_name", history_item.get("process", "Unknown"))
+        timestamp = history_item.get("timestamp", 0)
+        time_str = time.strftime("%H:%M:%S", time.localtime(timestamp))
+        target_app = history_item.get("target_app", history_item.get("process", "Unknown"))
+        is_auto_approved = history_item.get("auto_approved", False)
+        
+        # 앱 이름
+        app_label = ctk.CTkLabel(
+            info_frame,
+            text=f"📦 {app_name}",
+            font=("Segoe UI", 11, "bold"),
+            text_color="#FFFFFF",
+            anchor="w"
+        )
+        app_label.pack(anchor="w", pady=(0, 2))
+        
+        # 타겟 앱 (더 눈에 띄게)
+        target_text = f"→ Target: {target_app}"
+        if is_auto_approved:
+            target_text += " ✓"
+        
+        target_label = ctk.CTkLabel(
+            info_frame,
+            text=target_text,
+            font=("Segoe UI", 10, "bold" if is_auto_approved else "normal"),
+            text_color="#10B981" if is_auto_approved else "#3B82F6",
+            anchor="w"
+        )
+        target_label.pack(anchor="w", pady=(0, 2))
+        
+        # 시간 + 민감 정보 표시
+        meta_frame = ctk.CTkFrame(info_frame, fg_color="transparent")
+        meta_frame.pack(anchor="w", fill="x")
+        
+        time_label = ctk.CTkLabel(
+            meta_frame,
+            text=f"🕒 {time_str}",
+            font=("Segoe UI", 9),
+            text_color="#666666"
+        )
+        time_label.pack(side="left")
+        
+        if is_auto_approved:
+            auto_label = ctk.CTkLabel(
+                meta_frame,
+                text="  👍 Auto",
+                font=("Segoe UI", 9, "bold"),
+                text_color="#10B981"
+            )
+            auto_label.pack(side="left")
+        
+        if is_sensitive:
+            warning_label = ctk.CTkLabel(
+                meta_frame,
+                text="  ⚠️ Sensitive",
+                font=("Segoe UI", 9, "bold"),
+                text_color="#EF4444"
+            )
+            warning_label.pack(side="left")
+        
+        # === 컬럼 2: 콘텐츠 (텍스트 또는 이미지) - 직접 grid에 배치 ===
+        if history_item["type"] == "text":
+            # 텍스트 미리보기
+            preview_text = history_item.get("preview", "")[:85]
+            if len(history_item.get("preview", "")) > 85:
+                preview_text += "..."
+            
+            preview_label = ctk.CTkLabel(
+                item_frame,
+                text=preview_text,
+                font=("Segoe UI", 10),
+                text_color="#CCCCCC",
+                anchor="w",
+                wraplength=240,
+                justify="left"
+            )
+            preview_label.grid(row=0, column=2, padx=5, pady=(5, 5), sticky="nw")  # 직접 grid 배치
+            
+        elif history_item["type"] == "image":
+            # 이미지 섬네일 - 직접 배치로 여백 제거
+            try:
+                thumbnail = history_item.get("full_content") or history_item.get("preview")
+                if thumbnail:
+                    ctk_image = ctk.CTkImage(
+                        light_image=thumbnail,
+                        dark_image=thumbnail,
+                        size=(45, 45)  # 크기 더 축소 (48 -> 45)
+                    )
+                    
+                    img_label = ctk.CTkLabel(
+                        item_frame,
+                        image=ctk_image,
+                        text=""  # 텍스트 공간 제거
+                    )
+                    img_label.grid(row=0, column=2, padx=5, pady=(2, 2), sticky="n")  # 직접 grid 배치, pady 극소화
+            except Exception as e:
+                error_label = ctk.CTkLabel(
+                    item_frame,
+                    text="Image preview unavailable",
+                    font=("Segoe UI", 9),
+                    text_color="#666666"
+                )
+                error_label.grid(row=0, column=2, padx=5, pady=(5, 5), sticky="nw")
+        
+        # === 컬럼 3: Re-copy 버튼 (상단 정렬) ===
+        def recopy():
+            content = history_item.get("content")
+            content_type = history_item.get("type")
+            
+            if content_type == "text" and content:
+                # 텍스트 복사
+                pyperclip.copy(content)
+                print(f"✓ 텍스트 클립보드에 복사됨")
+            elif content_type == "image" and content:
+                # 이미지 복사 (클립보드에 설정)
+                if self.app and hasattr(self.app.monitor, '_set_clipboard_image'):
+                    import threading
+                    threading.Thread(
+                        target=self.app.monitor._set_clipboard_image,
+                        args=(content,),
+                        daemon=True
+                    ).start()
+                    print(f"✓ 이미지 클립보드에 복사됨")
+        
+        # 버튼을 grid로 배치하여 상단 정렬
+        recopy_btn = ctk.CTkButton(
+            item_frame,
+            text="📋 Copy",  # 텍스트 축약
+            width=80,  # width 더 줄임
+            height=32,  # height 더 줄임 (36 -> 32)
+            corner_radius=6,
+            fg_color="#3B82F6",
+            hover_color="#2563EB",
+            font=("Segoe UI", 9, "bold"),  # 폰트 크기 더 줄임
+            command=recopy
+        )
+        recopy_btn.grid(row=0, column=3, padx=8, pady=(5, 5), sticky="n")  # pady 극도로 최소화
+    
     def show_appearance_settings(self):
         """외관 설정 탭"""
         self._clear_content()
+        self.current_tab = 'appearance'
         
         header = ctk.CTkLabel(
             self.content_frame,
@@ -467,7 +715,7 @@ class SettingsWindow:
                 self._create_whitelist_item(process)
     
     def _create_whitelist_item(self, process_name):
-        """화이트리스트 항목 생성 (앱 아이콘 포함)"""
+        """화이트리스트 항목 생성 (앱 아이콘 비동기 로드)"""
         item_frame = ctk.CTkFrame(
             self.whitelist_container,
             fg_color="#2D2D2D",
@@ -477,35 +725,24 @@ class SettingsWindow:
         item_frame.pack(fill="x", padx=5, pady=5)
         item_frame.pack_propagate(False)
         
-        # 아이콘 추출 시도
-        icon_label = None
-        try:
-            icon_image = self._extract_process_icon(process_name)
-            if icon_image:
-                ctk_image = ctk.CTkImage(
-                    light_image=icon_image,
-                    dark_image=icon_image,
-                    size=(24, 24)
-                )
-                icon_label = ctk.CTkLabel(
-                    item_frame,
-                    image=ctk_image,
-                    text=""
-                )
-                icon_label.pack(side="left", padx=(15, 5), pady=10)
-        except:
-            pass
+        # 기본 아이콘 먼저 표시
+        icon_label = ctk.CTkLabel(
+            item_frame,
+            text="📦",
+            font=("Segoe UI", 18),
+            text_color="#FFFFFF"
+        )
+        icon_label.pack(side="left", padx=(15, 5), pady=10)
         
         # 프로세스 이름
-        prefix = "" if icon_label else "📦 "
         name_label = ctk.CTkLabel(
             item_frame,
-            text=f"{prefix}{process_name}",
+            text=process_name,
             font=("Segoe UI", 12),
             text_color="#FFFFFF",
             anchor="w"
         )
-        name_label.pack(side="left", padx=(5 if icon_label else 15, 10), pady=10)
+        name_label.pack(side="left", padx=(5, 10), pady=10)
         
         # 삭제 버튼
         delete_btn = ctk.CTkButton(
@@ -520,6 +757,94 @@ class SettingsWindow:
             command=lambda: self._remove_whitelist_item(process_name)
         )
         delete_btn.pack(side="right", padx=10, pady=10)
+        
+        # 비동기로 아이콘 추출 시도 (선택적)
+        import threading
+        def load_icon_async():
+            try:
+                icon_image = self._extract_process_icon_simple(process_name)
+                if icon_image and icon_label.winfo_exists():
+                    ctk_image = ctk.CTkImage(
+                        light_image=icon_image,
+                        dark_image=icon_image,
+                        size=(24, 24)
+                    )
+                    icon_label.configure(image=ctk_image, text="")
+            except:
+                pass
+        
+        # 백그라운드에서 아이콘 로드
+        threading.Thread(target=load_icon_async, daemon=True).start()
+    
+    def _extract_process_icon_simple(self, process_name: str) -> Image.Image:
+        """프로세스 실행 파일에서 고품질 아이콘 추출 (LANCZOS 리사이징)"""
+        try:
+            # 주요 경로만 확인
+            common_paths = [
+                os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'System32', process_name),
+                os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'SysWOW64', process_name),
+                os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'), 'Common Files', process_name),
+            ]
+            
+            exe_path = None
+            for path in common_paths:
+                if os.path.exists(path):
+                    exe_path = path
+                    break
+            
+            if not exe_path:
+                return None
+            
+            # 고해상도 아이콘 추출
+            large, small = win32gui.ExtractIconEx(exe_path, 0)
+            
+            # large 아이콘 사용 (더 고품질)
+            icon_handle = large[0] if large else (small[0] if small else None)
+            
+            if icon_handle:
+                # 아이콘 크기 가져오기
+                ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+                ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+                
+                # DC 생성
+                hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                hbmp = win32ui.CreateBitmap()
+                hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
+                hdc_mem = hdc.CreateCompatibleDC()
+                hdc_mem.SelectObject(hbmp)
+                
+                # 투명 배경으로 설정
+                hdc_mem.FillSolidRect((0, 0, ico_x, ico_y), win32api.RGB(0, 0, 0))
+                
+                # 아이콘 그리기
+                hdc_mem.DrawIcon((0, 0), icon_handle)
+                
+                # 비트맵 데이터 추출
+                bmpstr = hbmp.GetBitmapBits(True)
+                img = Image.frombuffer(
+                    'RGB',
+                    (ico_x, ico_y),
+                    bmpstr, 'raw', 'BGRX', 0, 1
+                )
+                
+                # LANCZOS 필터로 고품질 리사이징
+                img_resized = img.resize((32, 32), Image.Resampling.LANCZOS)
+                
+                # 리소스 해제
+                if large:
+                    for icon in large:
+                        win32gui.DestroyIcon(icon)
+                if small:
+                    for icon in small:
+                        win32gui.DestroyIcon(icon)
+                
+                return img_resized
+            
+        except Exception as e:
+            # 조용히 실패 처리
+            pass
+        
+        return None
     
     def _extract_process_icon(self, process_name: str) -> Image.Image:
         """프로세스 실행 파일에서 아이콘 추출"""

@@ -39,6 +39,9 @@ class PasteGuardian:
         # 메인 이벤트 루프 (숨겨진 창)
         self.root = None
         
+        # 클립보드 히스토리 (최근 10개 저장)
+        self.clipboard_history = []
+        
     def start(self):
         """애플리케이션 시작"""
         print("=" * 50)
@@ -128,6 +131,8 @@ class PasteGuardian:
         # 화이트리스트 확인
         if process_name in self.config.get_whitelist():
             print(f"✓ 화이트리스트 프로세스: {process_name} - 자동 허용")
+            # 화이트리스트도 히스토리에 기록
+            self._add_to_history(clipboard_data, process_name)
             self._allow_paste(clipboard_data)
             return
         
@@ -135,6 +140,8 @@ class PasteGuardian:
         content_type = clipboard_data.get("type")
         if not self.config.is_monitoring_enabled(content_type):
             print(f"✓ {content_type} 모니터링 비활성화 - 자동 허용")
+            # 모니터링 비활성화도 히스토리에 기록
+            self._add_to_history(clipboard_data, process_name)
             self._allow_paste(clipboard_data)
             return
         
@@ -165,7 +172,8 @@ class PasteGuardian:
             self.current_popup = ConfirmationPopup(
                 clipboard_data=clipboard_data,
                 process_name=process_name,
-                on_confirm=lambda data: self._on_popup_confirm(data),
+                on_confirm=lambda data: self._on_popup_confirm(data, process_name),
+                on_always_allow=lambda data: self._on_popup_always_allow(data, process_name),
                 on_cancel=self._on_popup_cancel,
                 opacity=opacity
             )
@@ -177,10 +185,29 @@ class PasteGuardian:
             import traceback
             traceback.print_exc()
     
-    def _on_popup_confirm(self, clipboard_data: dict):
+    def _on_popup_confirm(self, clipboard_data: dict, process_name: str):
         """팝업 확인 버튼 클릭"""
         print("붙여넣기 승인")
-        self._allow_paste(clipboard_data)
+        
+        # 히스토리에 추가 (실제 붙여넣기 수행 시점)
+        self._add_to_history(clipboard_data, process_name)
+        
+        # 팝업 닫기 후 붙여넣기 수행
+        self._allow_paste_with_focus(clipboard_data)
+        self.current_popup = None
+    
+    def _on_popup_always_allow(self, clipboard_data: dict, process_name: str):
+        """팝업 'Always Allow' 버튼 클릭 - 화이트리스트에 추가"""
+        print(f"화이트리스트에 추가: {process_name}")
+        
+        # 화이트리스트에 추가
+        self.config.add_to_whitelist(process_name)
+        
+        # 히스토리에 추가
+        self._add_to_history(clipboard_data, process_name)
+        
+        # 붙여넣기 수행
+        self._allow_paste_with_focus(clipboard_data)
         self.current_popup = None
     
     def _on_popup_cancel(self):
@@ -188,8 +215,10 @@ class PasteGuardian:
         print("붙여넣기 거부")
         self.current_popup = None
     
-    def _allow_paste(self, clipboard_data: dict):
-        """붙여넣기 허용"""
+    def _allow_paste(self, clipboard_data: dict, process_name: str = None):
+        """붙여넣기 허용 (화이트리스트용)"""
+        # 이미 on_paste_request에서 히스토리에 추가했으므로 여기서는 추가하지 않음
+        
         if clipboard_data["type"] == "text":
             # 텍스트 붙여넣기 수행
             threading.Thread(
@@ -197,12 +226,92 @@ class PasteGuardian:
                 args=(clipboard_data["content"],),
                 daemon=True
             ).start()
+        elif clipboard_data["type"] == "image":
+            # 이미지 붙여넣기
+            image_data = clipboard_data.get("content")
+            if image_data:
+                threading.Thread(
+                    target=ClipboardMonitor.perform_paste_with_focus,
+                    args=("", "image", image_data),
+                    daemon=True
+                ).start()
+    
+    def _allow_paste_with_focus(self, clipboard_data: dict):
+        """포커스 복원을 통한 붙여넣기 허용 (팝업 승인용)"""
+        content_type = clipboard_data.get("type")
+        
+        if content_type == "text":
+            # 텍스트 붙여넣기
+            threading.Thread(
+                target=ClipboardMonitor.perform_paste_with_focus,
+                args=(clipboard_data["content"], "text", None),
+                daemon=True
+            ).start()
+        elif content_type == "image":
+            # 이미지 붙여넣기
+            threading.Thread(
+                target=ClipboardMonitor.perform_paste_with_focus,
+                args=("", "image", clipboard_data.get("content")),
+                daemon=True
+            ).start()
+    
+    def _add_to_history(self, clipboard_data: dict, process_name: str):
+        """클립보드 히스토리에 추가 (최근 10개 유지, 메모리 관리 최적화)"""
+        import time
+        
+        content_type = clipboard_data.get("type")
+        content = clipboard_data.get("content")
+        
+        # 이미지의 경우 메모리 관리를 위해 섬네일만 저장
+        if content_type == "image" and content:
+            try:
+                # 섬네일 생성 (150x150 또는 preview 사용)
+                thumbnail = clipboard_data.get("preview")
+                if not thumbnail and content:
+                    from PIL import Image
+                    thumbnail = content.copy()
+                    thumbnail.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                
+                full_content = thumbnail  # 섬네일로 대체
+            except:
+                full_content = None
+        else:
+            full_content = content
+        
+        history_item = {
+            "timestamp": time.time(),
+            "type": content_type,
+            "preview": clipboard_data.get("preview", ""),
+            "content": content,  # 원본 콘텐츠 (텍스트) 또는 섬네일 (이미지)
+            "full_content": full_content,  # 전체 콘텐츠
+            "process": process_name,
+            "app_name": process_name.replace('.exe', '').title(),  # 프로그램명
+            "is_sensitive": clipboard_data.get("is_sensitive", False)
+        }
+        
+        # 최대 10개 유지
+        if len(self.clipboard_history) >= 10:
+            # 가장 오래된 항목 제거
+            old_item = self.clipboard_history.pop(0)
+            # 이미지 메모리 해제
+            if old_item.get("type") == "image" and old_item.get("full_content"):
+                try:
+                    del old_item["full_content"]
+                    del old_item["content"]
+                except:
+                    pass
+        
+        self.clipboard_history.append(history_item)
+    
+    def get_clipboard_history(self):
+        """클립보드 히스토리 반환"""
+        return list(reversed(self.clipboard_history))  # 최신 순
     
     def _show_settings(self, icon=None, item=None):
         """설정 창 표시"""
         def show():
             if not self.settings_window or not self.settings_window.window or not self.settings_window.window.winfo_exists():
-                self.settings_window = SettingsWindow(self.config, parent=self.root)
+                self.settings_window = SettingsWindow(self.config, parent=self.root, app=self)
                 self.settings_window.show()
             else:
                 self.settings_window.window.focus()
