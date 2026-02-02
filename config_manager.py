@@ -4,14 +4,17 @@
 """
 import json
 import os
+import base64
 from typing import Dict, List, Any
+from io import BytesIO
 
 
 class ConfigManager:
     """애플리케이션 설정을 관리하는 클래스"""
     
-    def __init__(self, config_file: str = "config.json"):
+    def __init__(self, config_file: str = "config.json", history_file: str = "history.json"):
         self.config_file = config_file
+        self.history_file = history_file
         self.default_config = {
             "monitor_text": True,
             "monitor_image": True,
@@ -79,3 +82,93 @@ class ConfigManager:
         elif content_type == "image":
             return self.config.get("monitor_image", True)
         return True
+    
+    def save_history(self, history_list: List[Dict[str, Any]]) -> bool:
+        """클립보드 히스토리를 파일에 저장합니다"""
+        try:
+            # 이미지를 Base64로 인코딩하여 저장
+            serializable_history = []
+            for item in history_list:
+                history_item = item.copy()
+                
+                # 이미지 데이터 처리
+                if history_item.get("type") == "image":
+                    # full_content 인코딩
+                    if history_item.get("full_content"):
+                        try:
+                            from PIL import Image
+                            img = history_item["full_content"]
+                            buffer = BytesIO()
+                            img.save(buffer, format="PNG")
+                            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                            history_item["full_content"] = img_base64
+                        except Exception as e:
+                            print(f"이미지 인코딩 실패: {e}")
+                            history_item["full_content"] = None
+                    
+                    # content 인코딩
+                    if history_item.get("content"):
+                        try:
+                            from PIL import Image
+                            img = history_item["content"]
+                            buffer = BytesIO()
+                            img.save(buffer, format="PNG")
+                            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                            history_item["content"] = img_base64
+                        except Exception as e:
+                            print(f"이미지 인코딩 실패: {e}")
+                            history_item["content"] = None
+                
+                serializable_history.append(history_item)
+            
+            # JSON 파일로 저장
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                json.dump(serializable_history, f, indent=4, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"히스토리 저장 실패: {e}")
+            return False
+    
+    def load_history(self) -> List[Dict[str, Any]]:
+        """저장된 클립보드 히스토리를 불러옵니다"""
+        if not os.path.exists(self.history_file):
+            return []
+        
+        try:
+            with open(self.history_file, 'r', encoding='utf-8') as f:
+                history_data = json.load(f)
+            
+            # Base64로 인코딩된 이미지 복원
+            restored_history = []
+            for item in history_data:
+                history_item = item.copy()
+                
+                if history_item.get("type") == "image":
+                    # full_content 디코딩
+                    if history_item.get("full_content"):
+                        try:
+                            from PIL import Image
+                            img_data = base64.b64decode(history_item["full_content"])
+                            img = Image.open(BytesIO(img_data))
+                            history_item["full_content"] = img
+                        except Exception as e:
+                            print(f"이미지 디코딩 실패: {e}")
+                            history_item["full_content"] = None
+                    
+                    # content 디코딩
+                    if history_item.get("content"):
+                        try:
+                            from PIL import Image
+                            img_data = base64.b64decode(history_item["content"])
+                            img = Image.open(BytesIO(img_data))
+                            history_item["content"] = img
+                        except Exception as e:
+                            print(f"이미지 디코딩 실패: {e}")
+                            history_item["content"] = None
+                
+                restored_history.append(history_item)
+            
+            return restored_history
+        except Exception as e:
+            print(f"히스토리 로드 실패: {e}")
+            return []

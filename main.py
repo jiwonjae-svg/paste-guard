@@ -42,6 +42,9 @@ class PasteGuardian:
         # 클립보드 히스토리 (최근 10개 저장)
         self.clipboard_history = []
         
+        # 저장된 히스토리 로드
+        self._load_history()
+        
     def start(self):
         """애플리케이션 시작"""
         print("=" * 50)
@@ -302,10 +305,50 @@ class PasteGuardian:
                     pass
         
         self.clipboard_history.append(history_item)
+        
+        # 히스토리 저장
+        self._save_history()
+        
+        # 설정 창이 열려있고 히스토리 탭이 활성화되어 있으면 실시간 갱신
+        self._refresh_settings_history()
     
     def get_clipboard_history(self):
         """클립보드 히스토리 반환"""
         return list(reversed(self.clipboard_history))  # 최신 순
+    
+    def _save_history(self):
+        """히스토리를 파일에 저장"""
+        try:
+            self.config.save_history(self.clipboard_history)
+        except Exception as e:
+            print(f"히스토리 저장 실패: {e}")
+    
+    def _load_history(self):
+        """저장된 히스토리 로드"""
+        try:
+            self.clipboard_history = self.config.load_history()
+            print(f"✓ {len(self.clipboard_history)}개의 히스토리 항목 로드됨")
+        except Exception as e:
+            print(f"히스토리 로드 실패: {e}")
+            self.clipboard_history = []
+    
+    def _refresh_settings_history(self):
+        """설정 창의 히스토리 탭 실시간 갱신"""
+        def refresh():
+            if (self.settings_window and 
+                self.settings_window.window and 
+                self.settings_window.window.winfo_exists() and
+                hasattr(self.settings_window, 'current_tab') and
+                self.settings_window.current_tab == 'history'):
+                # 히스토리 탭이 활성화되어 있으면 갱신
+                self.settings_window.show_history_settings()
+        
+        # 메인 스레드에서 실행
+        if self.root:
+            try:
+                self.root.after(0, refresh)
+            except:
+                pass
     
     def _show_settings(self, icon=None, item=None):
         """설정 창 표시"""
@@ -334,8 +377,9 @@ class PasteGuardian:
         if self.tray_icon:
             self.tray_icon.stop()
         
-        # 설정 저장
+        # 설정 및 히스토리 저장
         self.config.save_config()
+        self._save_history()
         
         # 메인 루프 종료
         if self.root:

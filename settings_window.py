@@ -358,42 +358,43 @@ class SettingsWindow:
             error_label.pack(pady=20)
     
     def _create_history_item(self, parent, history_item):
-        """히스토리 항목 생성 - grid 레이아웃으로 완벽한 수평 정렬"""
+        """히스토리 항목 생성 - 텍스트와 이미지 완전히 동일한 구조"""
         import time
         import pyperclip
         from PIL import ImageTk
         
-        # 메인 항목 프레임 (가변 높이 - 내용에 따라 자동 조절)
+        # 메인 항목 프레임
         item_frame = ctk.CTkFrame(
             parent,
             fg_color="#2D2D2D",
-            corner_radius=10
+            corner_radius=10,
+            height=80
         )
-        item_frame.pack(fill="x", padx=5, pady=3)
-        # pack_propagate는 True로 유지 (기본값) - 내용물에 맞게 크기 조절
+        item_frame.pack(fill="x", expand=False, padx=5, pady=5)
+        item_frame.pack_propagate(False)
         
-        # Grid 설정 (4컬럼: 아이콘 | 정보 | 콘텐츠 | 버튼) - minsize 제거하여 컴팩트하게
-        item_frame.grid_columnconfigure(0, weight=0)  # 아이콘 - minsize 제거
-        item_frame.grid_columnconfigure(1, weight=1)  # 앱 정보 - weight 조정
-        item_frame.grid_columnconfigure(2, weight=2)  # 콘텐츠
-        item_frame.grid_columnconfigure(3, weight=0)  # 버튼
-        item_frame.grid_rowconfigure(0, weight=0)  # weight=0으로 수직 확장 방지
+        # Grid 설정
+        item_frame.grid_columnconfigure(0, weight=0, minsize=45)
+        item_frame.grid_columnconfigure(1, weight=1, minsize=160)
+        item_frame.grid_columnconfigure(2, weight=2, minsize=220)
+        item_frame.grid_columnconfigure(3, weight=0, minsize=95)
+        item_frame.grid_rowconfigure(0, weight=1)
         
-        # === 컬럼 0: 아이콘 (상단 정렬) ===
-        type_icon = "📝" if history_item["type"] == "text" else "🖼️"
+        # 아이콘
+        type_icon = "📦" if history_item["type"] == "text" else "🖼️"
         is_sensitive = history_item.get("is_sensitive", False)
         
         icon_label = ctk.CTkLabel(
             item_frame,
             text=type_icon,
-            font=("Segoe UI", 24),  # 폰트 크기 더 줄임 (28 -> 24)
+            font=("Segoe UI", 20),
             text_color="#EF4444" if is_sensitive else "#3B82F6"
         )
-        icon_label.grid(row=0, column=0, padx=(8, 3), pady=(5, 5), sticky="n")  # pady 극도로 최소화, sticky="n"
+        icon_label.grid(row=0, column=0, padx=(12, 0), pady=12, sticky="nw")
         
-        # === 컬럼 1: 앱 정보 (프로그램명 + 시간 + 타겟) - 상단 정렬 ===
+        # 앱 정보 프레임
         info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-        info_frame.grid(row=0, column=1, padx=5, pady=(5, 5), sticky="n")  # pady 극도로 최소화, sticky="n"
+        info_frame.grid(row=0, column=1, padx=(10, 10), pady=12, sticky="nw")
         
         app_name = history_item.get("app_name", history_item.get("process", "Unknown"))
         timestamp = history_item.get("timestamp", 0)
@@ -401,17 +402,18 @@ class SettingsWindow:
         target_app = history_item.get("target_app", history_item.get("process", "Unknown"))
         is_auto_approved = history_item.get("auto_approved", False)
         
-        # 앱 이름
+        # 타입 표시 (Text 또는 Image)
+        type_text = "Text" if history_item["type"] == "text" else "Image"
+        
         app_label = ctk.CTkLabel(
             info_frame,
-            text=f"📦 {app_name}",
+            text=f"📦 {type_text}",
             font=("Segoe UI", 11, "bold"),
             text_color="#FFFFFF",
             anchor="w"
         )
         app_label.pack(anchor="w", pady=(0, 2))
         
-        # 타겟 앱 (더 눈에 띄게)
         target_text = f"→ Target: {target_app}"
         if is_auto_approved:
             target_text += " ✓"
@@ -425,7 +427,6 @@ class SettingsWindow:
         )
         target_label.pack(anchor="w", pady=(0, 2))
         
-        # 시간 + 민감 정보 표시
         meta_frame = ctk.CTkFrame(info_frame, fg_color="transparent")
         meta_frame.pack(anchor="w", fill="x")
         
@@ -455,61 +456,69 @@ class SettingsWindow:
             )
             warning_label.pack(side="left")
         
-        # === 컬럼 2: 콘텐츠 (텍스트 또는 이미지) - 직접 grid에 배치 ===
+        # 콘텐츠 프레임 (텍스트와 이미지 모두 동일하게)
+        content_container = ctk.CTkFrame(item_frame, fg_color="transparent")
+        content_container.grid(row=0, column=2, padx=(10, 10), pady=12, sticky="nw")
+        
         if history_item["type"] == "text":
-            # 텍스트 미리보기
             preview_text = history_item.get("preview", "")[:85]
             if len(history_item.get("preview", "")) > 85:
                 preview_text += "..."
             
-            preview_label = ctk.CTkLabel(
-                item_frame,
+            text_label = ctk.CTkLabel(
+                content_container,
                 text=preview_text,
                 font=("Segoe UI", 10),
                 text_color="#CCCCCC",
                 anchor="w",
                 wraplength=240,
-                justify="left"
+                justify="left",
+                width=240,
+                height=40
             )
-            preview_label.grid(row=0, column=2, padx=5, pady=(5, 5), sticky="nw")  # 직접 grid 배치
+            text_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
             
-        elif history_item["type"] == "image":
-            # 이미지 섬네일 - 직접 배치로 여백 제거
+        else:  # image
             try:
                 thumbnail = history_item.get("full_content") or history_item.get("preview")
                 if thumbnail:
                     ctk_image = ctk.CTkImage(
                         light_image=thumbnail,
                         dark_image=thumbnail,
-                        size=(45, 45)  # 크기 더 축소 (48 -> 45)
+                        size=(40, 40)
                     )
                     
-                    img_label = ctk.CTkLabel(
-                        item_frame,
+                    image_label = ctk.CTkLabel(
+                        content_container,
                         image=ctk_image,
-                        text=""  # 텍스트 공간 제거
+                        text="",
+                        width=40,
+                        height=40
                     )
-                    img_label.grid(row=0, column=2, padx=5, pady=(2, 2), sticky="n")  # 직접 grid 배치, pady 극소화
-            except Exception as e:
+                    image_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
+                else:
+                    raise Exception("No image")
+            except:
                 error_label = ctk.CTkLabel(
-                    item_frame,
+                    content_container,
                     text="Image preview unavailable",
                     font=("Segoe UI", 9),
-                    text_color="#666666"
+                    text_color="#666666",
+                    anchor="w",
+                    width=240,
+                    height=40
                 )
-                error_label.grid(row=0, column=2, padx=5, pady=(5, 5), sticky="nw")
+                error_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
         
-        # === 컬럼 3: Re-copy 버튼 (상단 정렬) ===
+        # 버튼
         def recopy():
             content = history_item.get("content")
             content_type = history_item.get("type")
             
             if content_type == "text" and content:
-                # 텍스트 복사
                 pyperclip.copy(content)
                 print(f"✓ 텍스트 클립보드에 복사됨")
             elif content_type == "image" and content:
-                # 이미지 복사 (클립보드에 설정)
                 if self.app and hasattr(self.app.monitor, '_set_clipboard_image'):
                     import threading
                     threading.Thread(
@@ -519,19 +528,18 @@ class SettingsWindow:
                     ).start()
                     print(f"✓ 이미지 클립보드에 복사됨")
         
-        # 버튼을 grid로 배치하여 상단 정렬
-        recopy_btn = ctk.CTkButton(
+        copy_btn = ctk.CTkButton(
             item_frame,
-            text="📋 Copy",  # 텍스트 축약
-            width=80,  # width 더 줄임
-            height=32,  # height 더 줄임 (36 -> 32)
+            text="📋 Copy",
+            width=75,
+            height=32,
             corner_radius=6,
             fg_color="#3B82F6",
             hover_color="#2563EB",
-            font=("Segoe UI", 9, "bold"),  # 폰트 크기 더 줄임
+            font=("Segoe UI", 9, "bold"),
             command=recopy
         )
-        recopy_btn.grid(row=0, column=3, padx=8, pady=(5, 5), sticky="n")  # pady 극도로 최소화
+        copy_btn.grid(row=0, column=3, padx=(10, 12), pady=12, sticky="nw")
     
     def show_appearance_settings(self):
         """외관 설정 탭"""
