@@ -59,3 +59,11 @@ translate_comments.py
 *.bak
 ~$*
 
+# Documentation (except README.md)
+*.md
+!README.md
+
+# Test outputs
+repomix-output.xml
+verify_structure.py
+

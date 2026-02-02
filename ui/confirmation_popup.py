@@ -1,6 +1,6 @@
 """
 Confirmation popup UI
-붙여넣기 요청 시 표시되는 플로팅 확인 창
+Floating confirmation window displayed on paste request
 """
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -21,19 +21,19 @@ class ConfirmationPopup:
         self.opacity = opacity
         self.window = None
         self.result = None
-        # 민감 정보 감지 (클립보드 데이터에서 직접 가져오기)
+        # Detect sensitive information (get directly from clipboard data)
         self.is_security_risk = clipboard_data.get("is_sensitive", False) or self._check_security_risk()
     
     def _check_security_risk(self) -> bool:
-        """보안 위험 패턴 감지"""
+        """Detect security risk patterns"""
         if self.clipboard_data.get("type") != "text":
             return False
         
         content = self.clipboard_data.get("content", "")
         
-        # 이메일 패턴
+        # Email pattern
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        # 카드번호 패턴 (16자리 숫자, 하이픈 포함 가능)
+        # Card number pattern (16 digits, hyphens allowed)
         card_pattern = r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'
         
         if re.search(email_pattern, content) or re.search(card_pattern, content):
@@ -42,25 +42,25 @@ class ConfirmationPopup:
         return False
         
     def show(self):
-        """팝업 창 표시"""
+        """Show popup window"""
         self.window = ctk.CTkToplevel()
         self.window.title("Paste Confirmation")
         
-        # 창 설정
+        # Window settings
         self.window.attributes('-topmost', True)
-        self.window.attributes('-alpha', 0.0)  # 초기에는 투명하게
-        self.window.overrideredirect(True)  # 타이틀바 제거
+        self.window.attributes('-alpha', 0.0)  # Initially transparent
+        self.window.overrideredirect(True)  # Remove title bar
         
-        # 배경색
+        # Background color
         self.window.configure(fg_color="#1E1E1E")
         
-        # 마우스 위치 가져오기
+        # Get mouse position
         x, y = self.window.winfo_pointerx(), self.window.winfo_pointery()
         
-        # 보안 위험 감지 시 빨간색 테두리
+        # Red border when security risk detected
         border_color = "#DC2626" if self.is_security_risk else "#3B82F6"
         
-        # 메인 프레임
+        # Main frame
         main_frame = ctk.CTkFrame(
             self.window,
             fg_color="#1E1E1E",
@@ -80,7 +80,7 @@ class ConfirmationPopup:
         header_frame.pack(padx=15, pady=(15, 10), fill="x")
         header_frame.pack_propagate(False)
         
-        # Icon과 제목 (보안 위험 시 경고 표시)
+        # Icon and title (warning shown on security risk)
         if self.is_security_risk:
             title_text = "⚠️ Sensitive Data Detected!"
             title_color = "#DC2626"
@@ -96,7 +96,7 @@ class ConfirmationPopup:
         )
         title_label.pack(side="left", padx=15, pady=10)
         
-        # 보안 경고 추가 메시지
+        # Additional security warning message
         if self.is_security_risk:
             warning_label = ctk.CTkLabel(
                 main_frame,
@@ -107,7 +107,7 @@ class ConfirmationPopup:
             )
             warning_label.pack(padx=15, pady=(5, 0), anchor="w")
         
-        # 프로세스 정보 (상단 우측에 크게)
+        # Process information (large on top right)
         process_label = ctk.CTkLabel(
             header_frame,
             text=f"Target: {self.process_name}",
@@ -116,7 +116,7 @@ class ConfirmationPopup:
         )
         process_label.pack(side="right", padx=15, pady=10)
         
-        # 컨텐츠 프레임
+        # Content frame
         content_frame = ctk.CTkFrame(
             main_frame,
             fg_color="#252525",
@@ -124,25 +124,25 @@ class ConfirmationPopup:
         )
         content_frame.pack(padx=15, pady=10, fill="both", expand=True)
         
-        # 컨텐츠 타입에 따른 미리보기
+        # Preview based on content type
         if self.clipboard_data["type"] == "text":
             self._create_text_preview(content_frame)
         elif self.clipboard_data["type"] == "image":
             self._create_image_preview(content_frame)
         
-        # Button 프레임 (완벽한 균형 레이아웃)
+        # Button frame (perfectly balanced layout)
         button_frame = ctk.CTkFrame(
             main_frame,
             fg_color="transparent"
         )
         button_frame.pack(padx=20, pady=(10, 20), fill="x")
         
-        # 3컬럼 Grid 레이아웃 (각 Button이 동일한 비율로 확장)
+        # 3-column grid layout (each button expands equally)
         button_frame.grid_columnconfigure(0, weight=1, uniform="button")
         button_frame.grid_columnconfigure(1, weight=1, uniform="button")
         button_frame.grid_columnconfigure(2, weight=1, uniform="button")
         
-        # 취소 Button (Deny)
+        # Cancel button (Deny)
         cancel_btn = ctk.CTkButton(
             button_frame,
             text="✖ Deny",
@@ -168,7 +168,7 @@ class ConfirmationPopup:
         )
         always_btn.grid(row=0, column=1, padx=5, sticky="ew")
         
-        # 확인 Button (Allow Once)
+        # Confirm button (Allow Once)
         confirm_btn = ctk.CTkButton(
             button_frame,
             text="✓ Allow Once",
@@ -181,12 +181,12 @@ class ConfirmationPopup:
         )
         confirm_btn.grid(row=0, column=2, padx=(5, 0), sticky="ew")
         
-        # 창 크기 조정 및 위치 설정
+        # Adjust window size and position
         self.window.update_idletasks()
         width = 450
         height = self.window.winfo_reqheight()
         
-        # 화면 경계 확인
+        # Check screen boundaries
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
         
@@ -195,20 +195,20 @@ class ConfirmationPopup:
         
         self.window.geometry(f"{width}x{height}+{x}+{y}")
         
-        # ESC 키로 취소
+        # Cancel with ESC key
         self.window.bind("<Escape>", lambda e: self._on_cancel_click())
         
-        # 창 외부 클릭 시 취소 (선택사항)
+        # Cancel when clicking outside window (optional)
         # self.window.bind("<FocusOut>", lambda e: self._on_cancel_click())
         
-        # 포커스 설정
+        # Set focus
         self.window.focus_force()
         
-        # 페이드인 애니메이션
+        # Fade-in animation
         self._animate_show()
         
     def _create_text_preview(self, parent):
-        """텍스트 미리보기 생성"""
+        """Generate text preview"""
         label = ctk.CTkLabel(
             parent,
             text="📄 Text Content:",
@@ -218,7 +218,7 @@ class ConfirmationPopup:
         )
         label.pack(padx=15, pady=(15, 5), anchor="w")
         
-        # 텍스트박스
+        # Text box
         textbox = ctk.CTkTextbox(
             parent,
             fg_color="#1E1E1E",
@@ -232,7 +232,7 @@ class ConfirmationPopup:
         textbox.insert("1.0", self.clipboard_data["preview"])
         textbox.configure(state="disabled")
         
-        # 길이 정보
+        # Length information
         full_length = len(self.clipboard_data["content"])
         if full_length > 200:
             info_label = ctk.CTkLabel(
@@ -244,7 +244,7 @@ class ConfirmationPopup:
             info_label.pack(padx=15, pady=(0, 10))
     
     def _create_image_preview(self, parent):
-        """이미지 미리보기 생성"""
+        """Generate image preview"""
         label = ctk.CTkLabel(
             parent,
             text="🖼️ Image Content:",
@@ -254,7 +254,7 @@ class ConfirmationPopup:
         )
         label.pack(padx=15, pady=(15, 5), anchor="w")
         
-        # 이미지 프레임
+        # Image frame
         image_frame = ctk.CTkFrame(
             parent,
             fg_color="#1E1E1E",
@@ -263,17 +263,17 @@ class ConfirmationPopup:
         image_frame.pack(padx=15, pady=(0, 15), fill="both", expand=True)
         
         try:
-            # PIL 이미지를 CTkImage로 변환
+            # Convert PIL image to CTkImage
             preview_img = self.clipboard_data["preview"]
             
-            # CTkImage 생성
+            # Create CTkImage
             ctk_image = ctk.CTkImage(
                 light_image=preview_img,
                 dark_image=preview_img,
                 size=(150, 150)
             )
             
-            # 이미지 레이블
+            # Image label
             img_label = ctk.CTkLabel(
                 image_frame,
                 image=ctk_image,
@@ -281,7 +281,7 @@ class ConfirmationPopup:
             )
             img_label.pack(padx=20, pady=20)
             
-            # 이미지 크기 정보
+            # Image size information
             original_img = self.clipboard_data["content"]
             size_label = ctk.CTkLabel(
                 parent,
@@ -319,9 +319,9 @@ class ConfirmationPopup:
         self.close()
     
     def _animate_show(self):
-        """팝업 페이드인 애니메이션 (0.15초)"""
+        """Popup fade-in animation (0.15 seconds)"""
         steps = 15
-        delay = 10  # ms (총 150ms = 0.15초)
+        delay = 10  # ms (total 150ms = 0.15 seconds)
         increment = self.opacity / steps
         
         def fade_step(current_alpha, step):
@@ -333,7 +333,7 @@ class ConfirmationPopup:
         fade_step(0.0, 0)
     
     def close(self):
-        """팝업 창 닫기"""
+        """Close popup window"""
         if self.window:
             self.window.destroy()
             self.window = None

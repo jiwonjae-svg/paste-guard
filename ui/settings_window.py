@@ -3,7 +3,7 @@ Settings window UI
 SaaS dashboard style settings interface
 """
 import customtkinter as ctk
-from config_manager import ConfigManager
+from config.config_manager import ConfigManager
 from typing import Callable
 import os
 import win32api
@@ -19,7 +19,7 @@ class SettingsWindow:
     def __init__(self, config_manager: ConfigManager, parent=None, app=None, on_close: Callable = None):
         self.config = config_manager
         self.parent = parent
-        self.app = app  # 메인 애플리케이션 참조
+        self.app = app  # Reference to main application
         self.on_close = on_close
         self.window = None
         self.whitelist_items = []
@@ -325,7 +325,7 @@ class SettingsWindow:
         )
         card.pack(padx=30, pady=10, fill="both", expand=True)
         
-        # 히스토리 목록
+        # History list
         list_frame = ctk.CTkScrollableFrame(
             card,
             fg_color="#1E1E1E",
@@ -511,7 +511,7 @@ class SettingsWindow:
             
             if content_type == "text" and content:
                 pyperclip.copy(content)
-                print(f"✓ 텍스트 클립보드에 복사됨")
+                print(f"✓ Text copied to clipboard")
             elif content_type == "image" and content:
                 if self.app and hasattr(self.app.monitor, '_set_clipboard_image'):
                     import threading
@@ -520,7 +520,7 @@ class SettingsWindow:
                         args=(content,),
                         daemon=True
                     ).start()
-                    print(f"✓ 이미지 클립보드에 복사됨")
+                    print(f"✓ Image copied to clipboard")
         
         copy_btn = ctk.CTkButton(
             item_frame,
@@ -696,7 +696,7 @@ class SettingsWindow:
             self._refresh_whitelist()
     
     def _refresh_whitelist(self):
-        """Whitelist list 새로고침"""
+        """Refresh whitelist display"""
         # Remove existing items
         for widget in self.whitelist_container.winfo_children():
             widget.destroy()
@@ -717,7 +717,7 @@ class SettingsWindow:
                 self._create_whitelist_item(process)
     
     def _create_whitelist_item(self, process_name):
-        """화이트리스트 항목 생성 (앱 Icon 비동기 로드)"""
+        """Create whitelist item with async icon loading"""
         item_frame = ctk.CTkFrame(
             self.whitelist_container,
             fg_color="#2D2D2D",
@@ -727,7 +727,7 @@ class SettingsWindow:
         item_frame.pack(fill="x", padx=5, pady=5)
         item_frame.pack_propagate(False)
         
-        # 기본 Icon 먼저 표시
+        # Display default icon first
         icon_label = ctk.CTkLabel(
             item_frame,
             text="📦",
@@ -746,7 +746,7 @@ class SettingsWindow:
         )
         name_label.pack(side="left", padx=(5, 10), pady=10)
         
-        # 삭제 Button
+        # Delete button
         delete_btn = ctk.CTkButton(
             item_frame,
             text="✖",
@@ -760,7 +760,7 @@ class SettingsWindow:
         )
         delete_btn.pack(side="right", padx=10, pady=10)
         
-        # 비동기로 Icon 추출 시도 (선택적)
+        # Try to extract icon asynchronously (optional)
         import threading
         def load_icon_async():
             try:
@@ -775,11 +775,11 @@ class SettingsWindow:
             except:
                 pass
         
-        # 백그라운드에서 Icon 로드
+        # Load icon in background
         threading.Thread(target=load_icon_async, daemon=True).start()
     
     def _extract_process_icon_simple(self, process_name: str) -> Image.Image:
-        """프로세스 실행 파일에서 고품질 Icon 추출 (LANCZOS 리사이징)"""
+        """Extract high-quality icon from process executable (LANCZOS resizing)"""
         try:
             # Check only major paths
             common_paths = [
@@ -797,14 +797,14 @@ class SettingsWindow:
             if not exe_path:
                 return None
             
-            # 고해상도 Icon 추출
+            # Extract high-resolution icon
             large, small = win32gui.ExtractIconEx(exe_path, 0)
             
-            # large Icon 사용 (더 고품질)
+            # Use large icon (higher quality)
             icon_handle = large[0] if large else (small[0] if small else None)
             
             if icon_handle:
-                # Icon 크기 가져오기
+                # Get icon size
                 ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
                 ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
                 
@@ -818,7 +818,7 @@ class SettingsWindow:
                 # Set transparent background
                 hdc_mem.FillSolidRect((0, 0, ico_x, ico_y), win32api.RGB(0, 0, 0))
                 
-                # Icon 그리기
+                # Draw icon
                 hdc_mem.DrawIcon((0, 0), icon_handle)
                 
                 # Extract bitmap data
@@ -849,7 +849,7 @@ class SettingsWindow:
         return None
     
     def _extract_process_icon(self, process_name: str) -> Image.Image:
-        """프로세스 실행 파일에서 Icon 추출"""
+        """Extract icon from process executable"""
         try:
             # Common program paths
             search_paths = [
@@ -871,7 +871,7 @@ class SettingsWindow:
             if not exe_path:
                 return None
             
-            # Icon 추출
+            # Extract icon
             ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
             ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
             
@@ -897,7 +897,7 @@ class SettingsWindow:
                 return img
             
         except Exception as e:
-            print(f"Icon 추출 실패 ({process_name}): {e}")
+            print(f"Icon extraction failed ({process_name}): {e}")
         
         return None
     

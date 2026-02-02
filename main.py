@@ -8,10 +8,10 @@ import sys
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import queue
-from config_manager import ConfigManager
-from clipboard_monitor import ClipboardMonitor
-from confirmation_popup import ConfirmationPopup
-from settings_window import SettingsWindow
+from config.config_manager import ConfigManager
+from monitors.clipboard_monitor import ClipboardMonitor
+from ui.confirmation_popup import ConfirmationPopup
+from ui.settings_window import SettingsWindow
 
 
 class PasteGuardian:

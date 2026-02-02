@@ -1,6 +1,6 @@
 """
 Clipboard monitoring module
-클립보드 변경 감지 및 붙여넣기 키 이벤트 가로채기
+Detects clipboard changes and intercepts paste key events
 """
 import threading
 import time
@@ -10,114 +10,114 @@ import win32con
 from PIL import Image, ImageGrab
 from io import BytesIO
 from typing import Callable, Optional, Tuple
-import keyboard  # pynput 대신 keyboard 사용
+import keyboard  # Use keyboard instead of pynput
 import psutil
 import win32gui
 import win32process
 
 
 class ClipboardMonitor:
-    """클립보드를 모니터링하고 붙여넣기 이벤트를 처리하는 클래스"""
+    """Class for monitoring clipboard and handling paste events"""
     
     def __init__(self, on_paste_request: Callable):
         self.on_paste_request = on_paste_request
         self.running = False
         self.monitor_thread = None
         self.last_clipboard_content = None
-        self.paste_pending = False  # 붙여넣기 대기 중
-        self.pending_data = None    # 대기 중인 데이터
-        self._allow_next_paste = False  # 다음 붙여넣기 허용 플래그 (무한 루프 방지)
-        self._processing = False  # 처리 중 플래그
+        self.paste_pending = False  # Waiting for paste
+        self.pending_data = None    # Pending data
+        self._allow_next_paste = False  # Flag to allow next paste (prevent infinite loop)
+        self._processing = False  # Processing flag
         
     def start(self):
         """Start monitoring"""
         if not self.running:
             self.running = True
             
-            # keyboard 라이브러리로 Ctrl+V 후킹
+            # Hook Ctrl+V with keyboard library
             keyboard.add_hotkey('ctrl+v', self._on_paste_hotkey, suppress=True)
             
-            print("클립보드 Start monitoring")
+            print("Clipboard Start monitoring")
     
     def stop(self):
         """Stop monitoring"""
         self.running = False
         
-        # 모든 후킹 해제
+        # Release all hooks
         try:
             keyboard.unhook_all_hotkeys()
             keyboard.unhook_all()
         except:
             pass
         
-        print("클립보드 Stop monitoring")
+        print("Clipboard Stop monitoring")
     
     def _on_paste_hotkey(self):
-        """Ctrl+V 핫키 콜백 - 붙여넣기 차단 및 확인 요청"""
+        """Ctrl+V hotkey callback - Block paste and request confirmation"""
         if not self.running:
             return
         
-        # 무한 루프 방지: 승인된 붙여넣기면 통과
+        # Prevent infinite loop: Allow approved paste
         if self._allow_next_paste:
-            print("✓ 승인된 붙여넣기 통과")
+            print("✓ Approved paste passed")
             self._allow_next_paste = False
-            # suppress=True에도 불구하고 이미 차단되었으므로 여기서는 아무것도 하지 않음
+            # Already blocked despite suppress=True, so do nothing here
             return
         
-        # 중복 처리 방지
+        # Prevent duplicate processing
         if self._processing:
-            print("⚠️ 이미 처리 중...")
+            print("⚠️ Already processing...")
             return
         
         self._processing = True
-        print("Ctrl+V 감지됨! (차단됨)")
+        print("Ctrl+V detected! (Blocked)")
         
         try:
-            # 붙여넣기 시도 처리
+            # Handle paste attempt
             self._handle_paste_attempt()
         finally:
             self._processing = False
     
     def _handle_paste_attempt(self):
-        """붙여넣기 시도 처리"""
+        """Handle paste attempt"""
         if not self.running:
-            print("모니터링이 실행 중이 아닙니다")
+            print("Monitoring is not running")
             return
         
-        print("붙여넣기 시도 감지 - 처리 시작")
+        print("Paste attempt detected - Starting processing")
         
-        # 현재 활성 프로세스 가져오기
+        # Get currently active process
         active_process = self._get_active_process()
-        print(f"활성 프로세스: {active_process}")
+        print(f"Active process: {active_process}")
         
-        # 클립보드 내용 가져오기
+        # Get clipboard content
         clipboard_data = self._get_clipboard_data()
         
         if clipboard_data:
-            print(f"클립보드 데이터 타입: {clipboard_data.get('type')}")
-            # 콜백 호출 (확인 Show popup)
+            print(f"Clipboard data type: {clipboard_data.get('type')}")
+            # Call callback (Show confirmation popup)
             self.on_paste_request(clipboard_data, active_process)
         else:
-            print("클립보드에 데이터가 없습니다")
+            print("No data in clipboard")
     
     def _get_active_process(self) -> str:
-        """현재 활성화된 Process name 가져오기"""
+        """Get currently active process name"""
         try:
-            # 활성 윈도우 핸들 가져오기
+            # Get active window handle
             hwnd = win32gui.GetForegroundWindow()
-            # 프로세스 ID 가져오기
+            # Get process ID
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            # Process name 가져오기
+            # Get process name
             process = psutil.Process(pid)
             return process.name()
         except Exception as e:
-            print(f"프로세스 정보 가져오기 실패: {e}")
+            print(f"Failed to get process info: {e}")
             return "unknown"
     
     def _get_clipboard_data(self) -> Optional[dict]:
         """Get clipboard data"""
         try:
-            # 이미지 확인
+            # Check image
             image = ImageGrab.grabclipboard()
             if image:
                 return {
@@ -127,7 +127,7 @@ class ClipboardMonitor:
                     "is_sensitive": False
                 }
             
-            # 텍스트 확인
+            # Check text
             text = pyperclip.paste()
             if text:
                 is_sensitive = self._check_sensitive_data(text)
@@ -139,116 +139,116 @@ class ClipboardMonitor:
                 }
             
         except Exception as e:
-            print(f"Get clipboard data 실패: {e}")
+            print(f"Failed to get clipboard data: {e}")
         
         return None
     
     def _check_sensitive_data(self, text: str) -> bool:
-        """민감 정보 패턴 감지 (이메일, 전화번호, 카드번호)"""
+        """Detect sensitive information patterns (email, phone, card number)"""
         import re
         
         patterns = [
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # 이메일
-            r'\b\d{2,4}[-.]?\d{3,4}[-.]?\d{4}\b',  # 전화번호
-            r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b',  # 카드번호
-            r'\b\d{6}[-]?\d{7}\b',  # 주민등록번호
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
+            r'\b\d{2,4}[-.]?\d{3,4}[-.]?\d{4}\b',  # Phone number
+            r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b',  # Card number
+            r'\b\d{6}[-]?\d{7}\b',  # ID number
         ]
         
         for pattern in patterns:
             if re.search(pattern, text):
-                print(f"⚠️ 민감 정보 감지: {pattern}")
+                print(f"⚠️ Sensitive information detected: {pattern}")
                 return True
         
         return False
     
     def _create_image_preview(self, image: Image.Image) -> Image.Image:
-        """이미지 미리보기 생성 (썸네일)"""
+        """Generate image preview (thumbnail)"""
         try:
             thumbnail = image.copy()
             thumbnail.thumbnail((150, 150), Image.Resampling.LANCZOS)
             return thumbnail
         except Exception as e:
-            print(f"이미지 미리보기 생성 실패: {e}")
+            print(f"Failed to generate image preview: {e}")
             return image
     
     @staticmethod
     def perform_paste(content: str):
-        """실제 붙여넣기 수행"""
+        """Perform actual paste"""
         try:
-            # 승인된 내용으로 클립보드 업데이트
+            # Update clipboard with approved content
             pyperclip.copy(content)
             
-            # 짧은 대기
+            # Short delay
             time.sleep(0.1)
             
-            # keyboard 라이브러리로 Ctrl+V 시뮬레이션
+            # Simulate Ctrl+V with keyboard library
             keyboard.press_and_release('ctrl+v')
             
-            print("✓ 붙여넣기 실행됨")
+            print("✓ Paste executed")
             
         except Exception as e:
-            print(f"붙여넣기 수행 실패: {e}")
+            print(f"Failed to perform paste: {e}")
     
     @staticmethod
     def perform_paste_with_focus(content: str, content_type: str = "text", image_data=None):
-        """포커스 복원을 통한 실제 붙여넣기 수행 (텍스트 및 이미지 지원)"""
+        """Perform actual paste through focus restoration (text and image support)"""
         try:
-            # 1. 클립보드에 내용 설정
+            # 1. Set content to clipboard
             if content_type == "text":
                 pyperclip.copy(content)
             elif content_type == "image" and image_data:
-                # win32clipboard를 사용한 이미지 처리
+                # Process image using win32clipboard
                 ClipboardMonitor._set_clipboard_image(image_data)
             
-            # 2. 현재 활성 윈도우 가져오기 (붙여넣기 대상)
+            # 2. Get currently active window (paste target)
             target_hwnd = win32gui.GetForegroundWindow()
             
-            # 3. 팝업이 닫히고 포커스가 복원될 시간 대기
+            # 3. Wait for popup to close and focus to be restored
             time.sleep(0.15)
             
-            # 4. 타겟 윈도우에 강제 포커스 설정
+            # 4. Force focus on target window
             if target_hwnd:
                 try:
                     win32gui.SetForegroundWindow(target_hwnd)
-                    time.sleep(0.05)  # 포커스 안정화
+                    time.sleep(0.05)  # Stabilize focus
                 except:
                     pass
             
-            # 5. 실제 붙여넣기 명령 전송
+            # 5. Send actual paste command
             keyboard.press_and_release('ctrl+v')
             
-            print(f"✓ 포커스 복원 붙여넣기 실행됨 ({content_type})")
+            print(f"✓ Focus restore paste executed ({content_type})")
             
         except Exception as e:
-            print(f"포커스 복원 붙여넣기 실패: {e}")
+            print(f"Failed to perform focus restore paste: {e}")
             import traceback
             traceback.print_exc()
     
     @staticmethod
     def _set_clipboard_image(image):
-        """이미지를 win32clipboard를 사용하여 클립보드에 안정적으로 설정 (DIB 포맷)"""
+        """Reliably set image to clipboard using win32clipboard (DIB format)"""
         try:
             from PIL import Image
             import io
             
-            # PIL 이미지를 BMP 포맷으로 변환
+            # Convert PIL image to BMP format
             output = io.BytesIO()
             
-            # RGBA면 RGB로 변환 (투명도 제거)
+            # Convert RGBA to RGB (remove transparency)
             if image.mode == 'RGBA':
-                # 흰색 배경으로 합성
+                # Composite with white background
                 background = Image.new('RGB', image.size, (255, 255, 255))
-                background.paste(image, mask=image.split()[3])  # 알파 채널 사용
+                background.paste(image, mask=image.split()[3])  # Use alpha channel
                 image = background
             elif image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # BMP 포맷으로 저장
+            # Save as BMP format
             image.save(output, 'BMP')
-            data = output.getvalue()[14:]  # BMP Header 제거 (14 바이트)
+            data = output.getvalue()[14:]  # Remove BMP header (14 bytes)
             output.close()
             
-            # 클립보드 열기 시도 (최대 3회)
+            # Try to open clipboard (max 3 attempts)
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -260,18 +260,18 @@ class ClipboardMonitor:
                     else:
                         raise
             
-            # 클립보드 비우기 및 DIB 포맷으로 설정
+            # Clear clipboard and set as DIB format
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardData(win32con.CF_DIB, data)
             win32clipboard.CloseClipboard()
             
-            print("✓ 이미지를 클립보드에 안정적으로 설정했습니다")
+            print("✓ Image reliably set to clipboard")
             
         except Exception as e:
-            print(f"이미지 클립보드 설정 실패: {e}")
+            print(f"Failed to set image to clipboard: {e}")
             import traceback
             traceback.print_exc()
-            # 실패 시 클립보드 닫기
+            # Close clipboard on failure
             try:
                 win32clipboard.CloseClipboard()
             except:
