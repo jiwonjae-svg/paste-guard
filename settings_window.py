@@ -373,15 +373,15 @@ class SettingsWindow:
         item_frame.pack(fill="x", expand=False, padx=5, pady=5)
         item_frame.pack_propagate(False)
         
-        # Grid 설정
-        item_frame.grid_columnconfigure(0, weight=0, minsize=45)
-        item_frame.grid_columnconfigure(1, weight=1, minsize=160)
-        item_frame.grid_columnconfigure(2, weight=2, minsize=220)
-        item_frame.grid_columnconfigure(3, weight=0, minsize=95)
+        # Grid 설정 - 고정 너비로 콘텐츠 시작점 통일
+        item_frame.grid_columnconfigure(0, weight=0, minsize=50)
+        item_frame.grid_columnconfigure(1, weight=0, minsize=180)
+        item_frame.grid_columnconfigure(2, weight=1)
+        item_frame.grid_columnconfigure(3, weight=0, minsize=100)
         item_frame.grid_rowconfigure(0, weight=1)
         
         # 아이콘
-        type_icon = "📦" if history_item["type"] == "text" else "🖼️"
+        type_icon = "📦" if history_item["type"] == "text" else "📦"
         is_sensitive = history_item.get("is_sensitive", False)
         
         icon_label = ctk.CTkLabel(
@@ -390,11 +390,11 @@ class SettingsWindow:
             font=("Segoe UI", 20),
             text_color="#EF4444" if is_sensitive else "#3B82F6"
         )
-        icon_label.grid(row=0, column=0, padx=(12, 0), pady=12, sticky="nw")
+        icon_label.grid(row=0, column=0, padx=(10, 0), pady=12, sticky="w")
         
         # 앱 정보 프레임
         info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-        info_frame.grid(row=0, column=1, padx=(10, 10), pady=12, sticky="nw")
+        info_frame.grid(row=0, column=1, padx=(5, 0), pady=12, sticky="w")
         
         app_name = history_item.get("app_name", history_item.get("process", "Unknown"))
         timestamp = history_item.get("timestamp", 0)
@@ -407,7 +407,7 @@ class SettingsWindow:
         
         app_label = ctk.CTkLabel(
             info_frame,
-            text=f"📦 {type_text}",
+            text=f"{type_text}",
             font=("Segoe UI", 11, "bold"),
             text_color="#FFFFFF",
             anchor="w"
@@ -458,7 +458,7 @@ class SettingsWindow:
         
         # 콘텐츠 프레임 (텍스트와 이미지 모두 동일하게)
         content_container = ctk.CTkFrame(item_frame, fg_color="transparent")
-        content_container.grid(row=0, column=2, padx=(10, 10), pady=12, sticky="nw")
+        content_container.grid(row=0, column=2, padx=(0, 5), pady=12, sticky="w")
         
         if history_item["type"] == "text":
             preview_text = history_item.get("preview", "")[:85]
@@ -472,11 +472,9 @@ class SettingsWindow:
                 text_color="#CCCCCC",
                 anchor="w",
                 wraplength=240,
-                justify="left",
-                width=240,
-                height=40
+                justify="left"
             )
-            text_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
+            text_label.pack(side="left", anchor="w", padx=0, pady=0)
             
         else:  # image
             try:
@@ -491,11 +489,9 @@ class SettingsWindow:
                     image_label = ctk.CTkLabel(
                         content_container,
                         image=ctk_image,
-                        text="",
-                        width=40,
-                        height=40
+                        text=""
                     )
-                    image_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
+                    image_label.pack(side="left", anchor="w", padx=0, pady=0)
                 else:
                     raise Exception("No image")
             except:
@@ -504,11 +500,9 @@ class SettingsWindow:
                     text="Image preview unavailable",
                     font=("Segoe UI", 9),
                     text_color="#666666",
-                    anchor="w",
-                    width=240,
-                    height=40
+                    anchor="w"
                 )
-                error_label.pack(anchor="w", padx=0, pady=0, fill="none", expand=False)
+                error_label.pack(side="left", anchor="w", padx=0, pady=0)
         
         # 버튼
         def recopy():
@@ -539,7 +533,7 @@ class SettingsWindow:
             font=("Segoe UI", 9, "bold"),
             command=recopy
         )
-        copy_btn.grid(row=0, column=3, padx=(10, 12), pady=12, sticky="nw")
+        copy_btn.grid(row=0, column=3, padx=(5, 10), pady=12, sticky="w")
     
     def show_appearance_settings(self):
         """외관 설정 탭"""

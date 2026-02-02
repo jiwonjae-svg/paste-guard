@@ -93,17 +93,32 @@ class ConfigManager:
                 
                 # 이미지 데이터 처리
                 if history_item.get("type") == "image":
+                    # preview 인코딩 (이미지 객체인 경우)
+                    if history_item.get("preview"):
+                        try:
+                            from PIL import Image
+                            preview = history_item["preview"]
+                            if isinstance(preview, Image.Image):
+                                buffer = BytesIO()
+                                preview.save(buffer, format="PNG")
+                                img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                                history_item["preview"] = img_base64
+                        except Exception as e:
+                            print(f"preview 인코딩 실패: {e}")
+                            history_item["preview"] = None
+                    
                     # full_content 인코딩
                     if history_item.get("full_content"):
                         try:
                             from PIL import Image
                             img = history_item["full_content"]
-                            buffer = BytesIO()
-                            img.save(buffer, format="PNG")
-                            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                            history_item["full_content"] = img_base64
+                            if isinstance(img, Image.Image):
+                                buffer = BytesIO()
+                                img.save(buffer, format="PNG")
+                                img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                                history_item["full_content"] = img_base64
                         except Exception as e:
-                            print(f"이미지 인코딩 실패: {e}")
+                            print(f"full_content 인코딩 실패: {e}")
                             history_item["full_content"] = None
                     
                     # content 인코딩
@@ -111,12 +126,13 @@ class ConfigManager:
                         try:
                             from PIL import Image
                             img = history_item["content"]
-                            buffer = BytesIO()
-                            img.save(buffer, format="PNG")
-                            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                            history_item["content"] = img_base64
+                            if isinstance(img, Image.Image):
+                                buffer = BytesIO()
+                                img.save(buffer, format="PNG")
+                                img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                                history_item["content"] = img_base64
                         except Exception as e:
-                            print(f"이미지 인코딩 실패: {e}")
+                            print(f"content 인코딩 실패: {e}")
                             history_item["content"] = None
                 
                 serializable_history.append(history_item)
@@ -124,9 +140,12 @@ class ConfigManager:
             # JSON 파일로 저장
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(serializable_history, f, indent=4, ensure_ascii=False)
+            print(f"✓ {len(serializable_history)}개의 히스토리 항목 저장됨")
             return True
         except Exception as e:
+            import traceback
             print(f"히스토리 저장 실패: {e}")
+            print(f"상세 오류: {traceback.format_exc()}")
             return False
     
     def load_history(self) -> List[Dict[str, Any]]:
@@ -144,26 +163,37 @@ class ConfigManager:
                 history_item = item.copy()
                 
                 if history_item.get("type") == "image":
+                    # preview 디코딩
+                    if history_item.get("preview") and isinstance(history_item["preview"], str):
+                        try:
+                            from PIL import Image
+                            img_data = base64.b64decode(history_item["preview"])
+                            img = Image.open(BytesIO(img_data))
+                            history_item["preview"] = img
+                        except Exception as e:
+                            print(f"preview 디코딩 실패: {e}")
+                            history_item["preview"] = None
+                    
                     # full_content 디코딩
-                    if history_item.get("full_content"):
+                    if history_item.get("full_content") and isinstance(history_item["full_content"], str):
                         try:
                             from PIL import Image
                             img_data = base64.b64decode(history_item["full_content"])
                             img = Image.open(BytesIO(img_data))
                             history_item["full_content"] = img
                         except Exception as e:
-                            print(f"이미지 디코딩 실패: {e}")
+                            print(f"full_content 디코딩 실패: {e}")
                             history_item["full_content"] = None
                     
                     # content 디코딩
-                    if history_item.get("content"):
+                    if history_item.get("content") and isinstance(history_item["content"], str):
                         try:
                             from PIL import Image
                             img_data = base64.b64decode(history_item["content"])
                             img = Image.open(BytesIO(img_data))
                             history_item["content"] = img
                         except Exception as e:
-                            print(f"이미지 디코딩 실패: {e}")
+                            print(f"content 디코딩 실패: {e}")
                             history_item["content"] = None
                 
                 restored_history.append(history_item)
