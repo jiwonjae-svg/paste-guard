@@ -1,6 +1,6 @@
 """
-설정 창 UI
-SaaS 대시보드 스타일의 설정 인터페이스
+Settings window UI
+SaaS dashboard style settings interface
 """
 import customtkinter as ctk
 from config_manager import ConfigManager
@@ -14,7 +14,7 @@ from PIL import Image
 import io
 
 class SettingsWindow:
-    """설정 창 클래스"""
+    """Settings window class"""
     
     def __init__(self, config_manager: ConfigManager, parent=None, app=None, on_close: Callable = None):
         self.config = config_manager
@@ -25,18 +25,18 @@ class SettingsWindow:
         self.whitelist_items = []
         
     def show(self):
-        """설정 창 표시"""
+        """Show settings window"""
         if self.window and self.window.winfo_exists():
             self.window.focus()
             self.window.lift()
             self.window.attributes('-topmost', True)
             self.window.attributes('-topmost', False)
-            # 기존 창이 있으면 히스토리 새로고침
+            # Refresh history if existing window
             if hasattr(self, 'current_tab') and self.current_tab == 'history':
                 self.show_history_settings()
             return
             
-        # 부모가 있으면 Toplevel, 없으면 CTk 사용
+        # Use Toplevel if parent exists, otherwise CTk
         if self.parent:
             self.window = ctk.CTkToplevel(self.parent)
         else:
@@ -45,21 +45,21 @@ class SettingsWindow:
         self.window.title("Paste Guardian - Settings")
         self.window.geometry("900x600")
         
-        # 테마 설정
+        # Theme settings
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
-        # 윈도우 배경
+        # Window background
         self.window.configure(fg_color="#1E1E1E")
         
-        # 메인 컨테이너
+        # Main container
         main_container = ctk.CTkFrame(self.window, fg_color="transparent")
         main_container.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # 좌측 사이드바 (탭 메뉴)
+        # Left sidebar (tab menu)
         self._create_sidebar(main_container)
         
-        # 우측 컨텐츠 영역
+        # Right content area
         self.content_frame = ctk.CTkFrame(
             main_container,
             fg_color="#252525",
@@ -67,14 +67,14 @@ class SettingsWindow:
         )
         self.content_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
         
-        # 기본 탭 표시
+        # Show default tab
         self.show_general_settings()
         
-        # 창 닫기 이벤트
+        # Window close event
         self.window.protocol("WM_DELETE_WINDOW", self._on_window_close)
         
     def _create_sidebar(self, parent):
-        """좌측 사이드바 생성"""
+        """Create left sidebar"""
         sidebar = ctk.CTkFrame(
             parent,
             width=200,
@@ -84,7 +84,7 @@ class SettingsWindow:
         sidebar.pack(side="left", fill="y", padx=(0, 10))
         sidebar.pack_propagate(False)
         
-        # 로고/타이틀
+        # Logo/Title
         title_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
         title_frame.pack(pady=(20, 30), padx=20)
         
@@ -103,18 +103,18 @@ class SettingsWindow:
         )
         title_label.pack()
         
-        # 구분선
+        # Separator
         separator = ctk.CTkFrame(sidebar, height=2, fg_color="#3B82F6")
         separator.pack(fill="x", padx=20, pady=(0, 20))
         
-        # 메뉴 버튼들
+        # Menu buttons
         self._create_menu_button(sidebar, "⚙️ General", self.show_general_settings)
         self._create_menu_button(sidebar, "📋 Monitoring", self.show_monitoring_settings)
         self._create_menu_button(sidebar, "✓ Whitelist", self.show_whitelist_settings)
         self._create_menu_button(sidebar, "📜 History", self.show_history_settings)
         self._create_menu_button(sidebar, "🎨 Appearance", self.show_appearance_settings)
         
-        # 하단 정보
+        # Bottom info
         info_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
         info_frame.pack(side="bottom", pady=20, padx=20)
         
@@ -127,7 +127,7 @@ class SettingsWindow:
         version_label.pack()
     
     def _create_menu_button(self, parent, text, command):
-        """메뉴 버튼 생성"""
+        """Create menu button"""
         btn = ctk.CTkButton(
             parent,
             text=text,
@@ -143,16 +143,16 @@ class SettingsWindow:
         return btn
     
     def _clear_content(self):
-        """컨텐츠 영역 초기화"""
+        """Clear content area"""
         for widget in self.content_frame.winfo_children():
             widget.destroy()
     
     def show_general_settings(self):
-        """일반 설정 탭"""
+        """General settings tab"""
         self._clear_content()
         self.current_tab = 'general'
         
-        # 헤더
+        # Header
         header = ctk.CTkLabel(
             self.content_frame,
             text="General Settings",
@@ -171,7 +171,7 @@ class SettingsWindow:
         )
         subtitle.pack(padx=30, pady=(0, 30), anchor="w")
         
-        # 설정 섹션
+        # Settings section
         self._create_setting_card(
             self.content_frame,
             "Application Status",
@@ -187,7 +187,7 @@ class SettingsWindow:
         )
     
     def show_monitoring_settings(self):
-        """모니터링 설정 탭"""
+        """Monitoring settings tab"""
         self._clear_content()
         self.current_tab = 'monitoring'
         
@@ -209,7 +209,7 @@ class SettingsWindow:
         )
         subtitle.pack(padx=30, pady=(0, 30), anchor="w")
         
-        # 텍스트 모니터링
+        # Text monitoring
         self._create_setting_card(
             self.content_frame,
             "Text Content",
@@ -217,7 +217,7 @@ class SettingsWindow:
             lambda p: self._create_toggle(p, "monitor_text", self.config.get("monitor_text"))
         )
         
-        # 이미지 모니터링
+        # Image monitoring
         self._create_setting_card(
             self.content_frame,
             "Image Content",
@@ -226,7 +226,7 @@ class SettingsWindow:
         )
     
     def show_whitelist_settings(self):
-        """화이트리스트 설정 탭"""
+        """Whitelist settings tab"""
         self._clear_content()
         self.current_tab = 'whitelist'
         
@@ -248,7 +248,7 @@ class SettingsWindow:
         )
         subtitle.pack(padx=30, pady=(0, 20), anchor="w")
         
-        # 화이트리스트 카드
+        # Whitelist card
         card = ctk.CTkFrame(
             self.content_frame,
             fg_color="#2D2D2D",
@@ -256,7 +256,7 @@ class SettingsWindow:
         )
         card.pack(padx=30, pady=10, fill="both", expand=True)
         
-        # 입력 프레임
+        # Input frame
         input_frame = ctk.CTkFrame(card, fg_color="transparent")
         input_frame.pack(padx=20, pady=20, fill="x")
         
@@ -282,7 +282,7 @@ class SettingsWindow:
         )
         add_btn.pack(side="right")
         
-        # 화이트리스트 목록
+        # Whitelist list
         list_frame = ctk.CTkScrollableFrame(
             card,
             fg_color="#1E1E1E",
@@ -295,9 +295,9 @@ class SettingsWindow:
         self._refresh_whitelist()
     
     def show_history_settings(self):
-        """히스토리 설정 탭"""
+        """History settings tab"""
         self._clear_content()
-        self.current_tab = 'history'  # 현재 탭 표시
+        self.current_tab = 'history'  # Mark current tab
         
         header = ctk.CTkLabel(
             self.content_frame,
@@ -317,7 +317,7 @@ class SettingsWindow:
         )
         subtitle.pack(padx=30, pady=(0, 20), anchor="w")
         
-        # 히스토리 카드
+        # History card
         card = ctk.CTkFrame(
             self.content_frame,
             fg_color="#2D2D2D",
@@ -334,7 +334,7 @@ class SettingsWindow:
         )
         list_frame.pack(padx=20, pady=20, fill="both", expand=True)
         
-        # 히스토리 데이터 가져오기
+        # Get history data
         if self.app:
             history = self.app.get_clipboard_history()
             if not history:
@@ -358,12 +358,12 @@ class SettingsWindow:
             error_label.pack(pady=20)
     
     def _create_history_item(self, parent, history_item):
-        """히스토리 항목 생성 - 텍스트와 이미지 완전히 동일한 구조"""
+        """Create history item - identical structure for text and image"""
         import time
         import pyperclip
         from PIL import ImageTk
         
-        # 메인 항목 프레임
+        # Main item frame
         item_frame = ctk.CTkFrame(
             parent,
             fg_color="#2D2D2D",
@@ -373,14 +373,14 @@ class SettingsWindow:
         item_frame.pack(fill="x", expand=False, padx=5, pady=5)
         item_frame.pack_propagate(False)
         
-        # Grid 설정 - 고정 너비로 콘텐츠 시작점 통일
+        # Grid settings - unified content start point with fixed width
         item_frame.grid_columnconfigure(0, weight=0, minsize=50)
         item_frame.grid_columnconfigure(1, weight=0, minsize=180)
         item_frame.grid_columnconfigure(2, weight=1)
         item_frame.grid_columnconfigure(3, weight=0, minsize=100)
         item_frame.grid_rowconfigure(0, weight=1)
         
-        # 아이콘
+        # Icon
         type_icon = "📦" if history_item["type"] == "text" else "📦"
         is_sensitive = history_item.get("is_sensitive", False)
         
@@ -392,7 +392,7 @@ class SettingsWindow:
         )
         icon_label.grid(row=0, column=0, padx=(10, 0), pady=12, sticky="w")
         
-        # 앱 정보 프레임
+        # App info frame
         info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
         info_frame.grid(row=0, column=1, padx=(5, 0), pady=12, sticky="w")
         
@@ -402,7 +402,7 @@ class SettingsWindow:
         target_app = history_item.get("target_app", history_item.get("process", "Unknown"))
         is_auto_approved = history_item.get("auto_approved", False)
         
-        # 타입 표시 (Text 또는 Image)
+        # Type display (Text or Image)
         type_text = "Text" if history_item["type"] == "text" else "Image"
         
         app_label = ctk.CTkLabel(
@@ -456,7 +456,7 @@ class SettingsWindow:
             )
             warning_label.pack(side="left")
         
-        # 콘텐츠 프레임 (텍스트와 이미지 모두 동일하게)
+        # Content frame (identical for text and image)
         content_container = ctk.CTkFrame(item_frame, fg_color="transparent")
         content_container.grid(row=0, column=2, padx=(0, 5), pady=12, sticky="w")
         
@@ -504,7 +504,7 @@ class SettingsWindow:
                 )
                 error_label.pack(side="left", anchor="w", padx=0, pady=0)
         
-        # 버튼
+        # Button
         def recopy():
             content = history_item.get("content")
             content_type = history_item.get("type")
@@ -536,7 +536,7 @@ class SettingsWindow:
         copy_btn.grid(row=0, column=3, padx=(5, 10), pady=12, sticky="w")
     
     def show_appearance_settings(self):
-        """외관 설정 탭"""
+        """Appearance settings tab"""
         self._clear_content()
         self.current_tab = 'appearance'
         
@@ -558,7 +558,7 @@ class SettingsWindow:
         )
         subtitle.pack(padx=30, pady=(0, 30), anchor="w")
         
-        # 투명도 설정
+        # Opacity settings
         self._create_setting_card(
             self.content_frame,
             "Popup Opacity",
@@ -567,7 +567,7 @@ class SettingsWindow:
         )
     
     def _create_setting_card(self, parent, title, description, content_creator):
-        """설정 카드 생성"""
+        """Create settings card"""
         card = ctk.CTkFrame(
             parent,
             fg_color="#2D2D2D",
@@ -575,7 +575,7 @@ class SettingsWindow:
         )
         card.pack(padx=30, pady=10, fill="x")
         
-        # 상단 텍스트
+        # Top text
         text_frame = ctk.CTkFrame(card, fg_color="transparent")
         text_frame.pack(padx=20, pady=(20, 10), fill="x")
         
@@ -597,14 +597,14 @@ class SettingsWindow:
         )
         desc_label.pack(anchor="w", pady=(5, 0))
         
-        # 컨텐츠 영역
+        # Content area
         content_frame = ctk.CTkFrame(card, fg_color="transparent")
         content_frame.pack(padx=20, pady=(10, 20), fill="x")
         
         content_creator(content_frame)
     
     def _create_toggle(self, parent, config_key, current_value):
-        """토글 스위치 생성"""
+        """Create toggle switch"""
         switch = ctk.CTkSwitch(
             parent,
             text="Enabled" if current_value else "Disabled",
@@ -622,13 +622,13 @@ class SettingsWindow:
         return switch
     
     def _toggle_setting(self, config_key, switch):
-        """설정 토글"""
+        """Toggle setting"""
         new_value = switch.get() == 1
         self.config.set(config_key, new_value)
         switch.configure(text="Enabled" if new_value else "Disabled")
     
     def _create_status_content(self, parent):
-        """상태 컨텐츠 생성"""
+        """Create status content"""
         status_label = ctk.CTkLabel(
             parent,
             text="● Active",
@@ -638,7 +638,7 @@ class SettingsWindow:
         status_label.pack(anchor="w")
     
     def _create_startup_content(self, parent):
-        """시작 옵션 컨텐츠 생성"""
+        """Create startup content"""
         switch = ctk.CTkSwitch(
             parent,
             text="Launch on startup",
@@ -650,7 +650,7 @@ class SettingsWindow:
         switch.pack(anchor="w")
     
     def _create_opacity_slider(self, parent):
-        """투명도 슬라이더 생성"""
+        """Create opacity slider"""
         current_opacity = self.config.get("popup_opacity", 0.95)
         
         value_label = ctk.CTkLabel(
@@ -683,12 +683,12 @@ class SettingsWindow:
         hint_label.pack(anchor="w")
     
     def _update_opacity(self, value, label):
-        """투명도 업데이트"""
+        """Update opacity"""
         self.config.set("popup_opacity", value)
         label.configure(text=f"{int(value * 100)}%")
     
     def _add_whitelist_item(self, entry):
-        """화이트리스트 항목 추가"""
+        """Add whitelist item"""
         process_name = entry.get().strip()
         if process_name:
             self.config.add_to_whitelist(process_name)
@@ -696,12 +696,12 @@ class SettingsWindow:
             self._refresh_whitelist()
     
     def _refresh_whitelist(self):
-        """화이트리스트 목록 새로고침"""
-        # 기존 항목 제거
+        """Whitelist list 새로고침"""
+        # Remove existing items
         for widget in self.whitelist_container.winfo_children():
             widget.destroy()
         
-        # 화이트리스트 가져오기
+        # Get whitelist
         whitelist = self.config.get_whitelist()
         
         if not whitelist:
@@ -717,7 +717,7 @@ class SettingsWindow:
                 self._create_whitelist_item(process)
     
     def _create_whitelist_item(self, process_name):
-        """화이트리스트 항목 생성 (앱 아이콘 비동기 로드)"""
+        """화이트리스트 항목 생성 (앱 Icon 비동기 로드)"""
         item_frame = ctk.CTkFrame(
             self.whitelist_container,
             fg_color="#2D2D2D",
@@ -727,7 +727,7 @@ class SettingsWindow:
         item_frame.pack(fill="x", padx=5, pady=5)
         item_frame.pack_propagate(False)
         
-        # 기본 아이콘 먼저 표시
+        # 기본 Icon 먼저 표시
         icon_label = ctk.CTkLabel(
             item_frame,
             text="📦",
@@ -736,7 +736,7 @@ class SettingsWindow:
         )
         icon_label.pack(side="left", padx=(15, 5), pady=10)
         
-        # 프로세스 이름
+        # Process name
         name_label = ctk.CTkLabel(
             item_frame,
             text=process_name,
@@ -746,7 +746,7 @@ class SettingsWindow:
         )
         name_label.pack(side="left", padx=(5, 10), pady=10)
         
-        # 삭제 버튼
+        # 삭제 Button
         delete_btn = ctk.CTkButton(
             item_frame,
             text="✖",
@@ -760,7 +760,7 @@ class SettingsWindow:
         )
         delete_btn.pack(side="right", padx=10, pady=10)
         
-        # 비동기로 아이콘 추출 시도 (선택적)
+        # 비동기로 Icon 추출 시도 (선택적)
         import threading
         def load_icon_async():
             try:
@@ -775,13 +775,13 @@ class SettingsWindow:
             except:
                 pass
         
-        # 백그라운드에서 아이콘 로드
+        # 백그라운드에서 Icon 로드
         threading.Thread(target=load_icon_async, daemon=True).start()
     
     def _extract_process_icon_simple(self, process_name: str) -> Image.Image:
-        """프로세스 실행 파일에서 고품질 아이콘 추출 (LANCZOS 리사이징)"""
+        """프로세스 실행 파일에서 고품질 Icon 추출 (LANCZOS 리사이징)"""
         try:
-            # 주요 경로만 확인
+            # Check only major paths
             common_paths = [
                 os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'System32', process_name),
                 os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'SysWOW64', process_name),
@@ -797,31 +797,31 @@ class SettingsWindow:
             if not exe_path:
                 return None
             
-            # 고해상도 아이콘 추출
+            # 고해상도 Icon 추출
             large, small = win32gui.ExtractIconEx(exe_path, 0)
             
-            # large 아이콘 사용 (더 고품질)
+            # large Icon 사용 (더 고품질)
             icon_handle = large[0] if large else (small[0] if small else None)
             
             if icon_handle:
-                # 아이콘 크기 가져오기
+                # Icon 크기 가져오기
                 ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
                 ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
                 
-                # DC 생성
+                # Create DC
                 hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
                 hbmp = win32ui.CreateBitmap()
                 hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
                 hdc_mem = hdc.CreateCompatibleDC()
                 hdc_mem.SelectObject(hbmp)
                 
-                # 투명 배경으로 설정
+                # Set transparent background
                 hdc_mem.FillSolidRect((0, 0, ico_x, ico_y), win32api.RGB(0, 0, 0))
                 
-                # 아이콘 그리기
+                # Icon 그리기
                 hdc_mem.DrawIcon((0, 0), icon_handle)
                 
-                # 비트맵 데이터 추출
+                # Extract bitmap data
                 bmpstr = hbmp.GetBitmapBits(True)
                 img = Image.frombuffer(
                     'RGB',
@@ -829,10 +829,10 @@ class SettingsWindow:
                     bmpstr, 'raw', 'BGRX', 0, 1
                 )
                 
-                # LANCZOS 필터로 고품질 리사이징
+                # High-quality resizing with LANCZOS filter
                 img_resized = img.resize((32, 32), Image.Resampling.LANCZOS)
                 
-                # 리소스 해제
+                # Release resources
                 if large:
                     for icon in large:
                         win32gui.DestroyIcon(icon)
@@ -843,15 +843,15 @@ class SettingsWindow:
                 return img_resized
             
         except Exception as e:
-            # 조용히 실패 처리
+            # Handle failure silently
             pass
         
         return None
     
     def _extract_process_icon(self, process_name: str) -> Image.Image:
-        """프로세스 실행 파일에서 아이콘 추출"""
+        """프로세스 실행 파일에서 Icon 추출"""
         try:
-            # 일반적인 프로그램 경로들
+            # Common program paths
             search_paths = [
                 os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'), '**', process_name),
                 os.path.join(os.environ.get('ProgramFiles(x86)', 'C:\\Program Files (x86)'), '**', process_name),
@@ -859,7 +859,7 @@ class SettingsWindow:
                 os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', '**', process_name),
             ]
             
-            # 실행 파일 찾기
+            # Find executable file
             import glob
             exe_path = None
             for path_pattern in search_paths:
@@ -871,7 +871,7 @@ class SettingsWindow:
             if not exe_path:
                 return None
             
-            # 아이콘 추출
+            # Icon 추출
             ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
             ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
             
@@ -897,22 +897,22 @@ class SettingsWindow:
                 return img
             
         except Exception as e:
-            print(f"아이콘 추출 실패 ({process_name}): {e}")
+            print(f"Icon 추출 실패 ({process_name}): {e}")
         
         return None
     
     def _remove_whitelist_item(self, process_name):
-        """화이트리스트 항목 제거"""
+        """Remove whitelist item"""
         self.config.remove_from_whitelist(process_name)
         self._refresh_whitelist()
     
     def _on_window_close(self):
-        """창 닫기 이벤트"""
+        """Window close event"""
         if self.on_close:
             self.on_close()
         self.window.destroy()
     
     def run(self):
-        """설정 창 실행"""
+        """Run settings window"""
         self.show()
         self.window.mainloop()

@@ -1,5 +1,5 @@
 """
-클립보드 모니터링 모듈
+Clipboard monitoring module
 클립보드 변경 감지 및 붙여넣기 키 이벤트 가로채기
 """
 import threading
@@ -30,17 +30,17 @@ class ClipboardMonitor:
         self._processing = False  # 처리 중 플래그
         
     def start(self):
-        """모니터링 시작"""
+        """Start monitoring"""
         if not self.running:
             self.running = True
             
             # keyboard 라이브러리로 Ctrl+V 후킹
             keyboard.add_hotkey('ctrl+v', self._on_paste_hotkey, suppress=True)
             
-            print("클립보드 모니터링 시작")
+            print("클립보드 Start monitoring")
     
     def stop(self):
-        """모니터링 중지"""
+        """Stop monitoring"""
         self.running = False
         
         # 모든 후킹 해제
@@ -50,7 +50,7 @@ class ClipboardMonitor:
         except:
             pass
         
-        print("클립보드 모니터링 중지")
+        print("클립보드 Stop monitoring")
     
     def _on_paste_hotkey(self):
         """Ctrl+V 핫키 콜백 - 붙여넣기 차단 및 확인 요청"""
@@ -95,19 +95,19 @@ class ClipboardMonitor:
         
         if clipboard_data:
             print(f"클립보드 데이터 타입: {clipboard_data.get('type')}")
-            # 콜백 호출 (확인 팝업 표시)
+            # 콜백 호출 (확인 Show popup)
             self.on_paste_request(clipboard_data, active_process)
         else:
             print("클립보드에 데이터가 없습니다")
     
     def _get_active_process(self) -> str:
-        """현재 활성화된 프로세스 이름 가져오기"""
+        """현재 활성화된 Process name 가져오기"""
         try:
             # 활성 윈도우 핸들 가져오기
             hwnd = win32gui.GetForegroundWindow()
             # 프로세스 ID 가져오기
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            # 프로세스 이름 가져오기
+            # Process name 가져오기
             process = psutil.Process(pid)
             return process.name()
         except Exception as e:
@@ -115,7 +115,7 @@ class ClipboardMonitor:
             return "unknown"
     
     def _get_clipboard_data(self) -> Optional[dict]:
-        """클립보드 데이터 가져오기"""
+        """Get clipboard data"""
         try:
             # 이미지 확인
             image = ImageGrab.grabclipboard()
@@ -139,7 +139,7 @@ class ClipboardMonitor:
                 }
             
         except Exception as e:
-            print(f"클립보드 데이터 가져오기 실패: {e}")
+            print(f"Get clipboard data 실패: {e}")
         
         return None
     
@@ -245,7 +245,7 @@ class ClipboardMonitor:
             
             # BMP 포맷으로 저장
             image.save(output, 'BMP')
-            data = output.getvalue()[14:]  # BMP 헤더 제거 (14 바이트)
+            data = output.getvalue()[14:]  # BMP Header 제거 (14 바이트)
             output.close()
             
             # 클립보드 열기 시도 (최대 3회)

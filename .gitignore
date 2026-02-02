@@ -22,6 +22,7 @@ wheels/
 
 # Virtual Environment
 venv/
+.venv/
 ENV/
 env/
 
@@ -32,13 +33,29 @@ env/
 *.swo
 *~
 
-# 설정 파일 (사용자별로 다를 수 있음)
+# Configuration files (may vary per user)
 config.json
+history.json
 
-# 로그 파일
+# Log files
 *.log
 
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# PyInstaller
+*.spec
+!build.spec
+PasteGuardian.spec
+
+# Build artifacts
+PasteGuardian.exe
+translate_comments.py
+
+# Temporary files
+*.tmp
+*.bak
+~$*
+

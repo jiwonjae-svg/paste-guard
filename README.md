@@ -1,86 +1,86 @@
 # 🔒 Paste Guardian
 
-클립보드 붙여넣기를 가로채서 사용자에게 확인을 요청하는 보안 프로그램입니다.
+A security program that intercepts clipboard paste operations and requests user confirmation.
 
-## ✨ 주요 기능
+## ✨ Key Features
 
-- **실시간 모니터링**: 백그라운드에서 Ctrl+V 키를 감시하고 가로챕니다
-- **세련된 확인 팝업**: 마우스 위치 근처에 다크 모드 플로팅 창 표시
-- **텍스트 미리보기**: 붙여넣을 텍스트의 앞부분을 미리 확인
-- **이미지 미리보기**: 붙여넣을 이미지의 썸네일 표시
-- **화이트리스트**: 신뢰하는 애플리케이션은 자동으로 허용
-- **세부 설정**: 텍스트/이미지 각각 모니터링 On/Off, 투명도 조절 등
+- **Real-time Monitoring**: Monitors and intercepts Ctrl+V keypresses in the background
+- **Elegant Confirmation Popup**: Dark mode floating window near mouse cursor
+- **Text Preview**: Preview the beginning of text before pasting
+- **Image Preview**: Display thumbnail of images before pasting
+- **Whitelist**: Automatically allow trusted applications
+- **Detailed Settings**: Text/Image monitoring toggle, opacity adjustment, and more
 
-## 🎨 디자인
+## 🎨 Design
 
-- **프레임워크**: CustomTkinter
-- **테마**: 다크 모드 (#1E1E1E 배경)
-- **포인트 컬러**: Soft Blue (#3B82F6)
-- **UI 스타일**: SaaS 대시보드 스타일의 설정 창
+- **Framework**: CustomTkinter
+- **Theme**: Dark mode (#1E1E1E background)
+- **Accent Color**: Soft Blue (#3B82F6)
+- **UI Style**: SaaS dashboard style settings window
 
-## 📦 설치 방법
+## 📦 Installation
 
-### 1. 필수 요구사항
+### 1. Requirements
 
-- Python 3.8 이상
+- Python 3.8 or higher
 - Windows 10/11
 
-### 2. 라이브러리 설치
+### 2. Install Libraries
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 3. 실행
+### 3. Run
 
 ```powershell
 python main.py
 ```
 
-## 🚀 사용 방법
+## 🚀 Usage
 
-### 첫 실행
+### First Run
 
-1. `main.py`를 실행하면 시스템 트레이에 아이콘이 생성됩니다
-2. 백그라운드에서 자동으로 클립보드를 모니터링합니다
-3. Ctrl+V를 누르면 확인 팝업이 나타납니다
+1. Run `main.py` to create a system tray icon
+2. Automatically monitors clipboard in the background
+3. Press Ctrl+V to see the confirmation popup
 
-### 설정 창 열기
+### Open Settings Window
 
-- 시스템 트레이 아이콘을 우클릭하여 "Settings" 선택
+- Right-click the system tray icon and select "Settings"
 
-### 화이트리스트 추가
+### Add to Whitelist
 
-1. 설정 창에서 "✓ Whitelist" 탭 선택
-2. 프로세스 이름 입력 (예: `notepad.exe`)
-3. "+ Add" 버튼 클릭
+1. Select "✓ Whitelist" tab in settings window
+2. Enter process name (e.g., `notepad.exe`)
+3. Click "+ Add" button
 
-### 모니터링 설정
+### Monitoring Settings
 
-- "📋 Monitoring" 탭에서 텍스트/이미지 각각 모니터링 On/Off
+- Toggle text/image monitoring in "📋 Monitoring" tab
 
-### 투명도 조절
+### Adjust Opacity
 
-- "🎨 Appearance" 탭에서 슬라이더로 팝업 투명도 조절
+- Adjust popup opacity with slider in "🎨 Appearance" tab
 
-## 📁 프로젝트 구조
+## 📁 Project Structure
 
 ```
 Project-Warning/
 │
-├── main.py                      # 메인 애플리케이션
-├── config_manager.py            # 설정 관리
-├── clipboard_monitor.py         # 클립보드 모니터링
-├── confirmation_popup.py        # 확인 팝업 UI
-├── settings_window.py           # 설정 창 UI
-├── requirements.txt             # 필요한 라이브러리
-├── config.json                  # 설정 파일 (자동 생성)
-└── README.md                    # 이 파일
+├── main.py                      # Main application
+├── config_manager.py            # Configuration management
+├── clipboard_monitor.py         # Clipboard monitoring
+├── confirmation_popup.py        # Confirmation popup UI
+├── settings_window.py           # Settings window UI
+├── requirements.txt             # Required libraries
+├── config.json                  # Configuration file (auto-generated)
+└── README.md                    # This file
 ```
 
-## ⚙️ 설정 파일 (config.json)
+## ⚙️ Configuration File (config.json)
 
-프로그램을 처음 실행하면 자동으로 생성됩니다.
+Automatically created on first run.
 
 ```json
 {
@@ -96,54 +96,54 @@ Project-Warning/
 }
 ```
 
-## 🔧 기술 스택
+## 🔧 Technology Stack
 
-- **UI 프레임워크**: CustomTkinter
-- **키보드 후킹**: pynput
-- **클립보드 접근**: pyperclip, PIL (ImageGrab)
-- **프로세스 관리**: psutil, pywin32
-- **시스템 트레이**: pystray
+- **UI Framework**: CustomTkinter
+- **Keyboard Hooking**: pynput
+- **Clipboard Access**: pyperclip, PIL (ImageGrab)
+- **Process Management**: psutil, pywin32
+- **System Tray**: pystray
 
-## ⚡ 성능 최적화
+## ⚡ Performance Optimization
 
-- 효율적인 이벤트 기반 아키텍처로 CPU 점유율 최소화
-- 백그라운드 스레드를 통한 논블로킹 모니터링
-- UI 큐를 사용한 안전한 멀티스레딩
+- Minimized CPU usage with efficient event-driven architecture
+- Non-blocking monitoring via background threads
+- Safe multithreading using UI queue
 
-## 🛡️ 보안 기능
+## 🛡️ Security Features
 
-- 모든 붙여넣기 시도를 사전에 차단
-- 사용자 확인 후에만 실제 붙여넣기 수행
-- 화이트리스트를 통한 신뢰 프로세스 관리
-- 콘텐츠 타입별 세부 제어
+- Preemptively blocks all paste attempts
+- Performs actual paste only after user confirmation
+- Manage trusted processes via whitelist
+- Granular control by content type
 
-## 📝 주의사항
+## 📝 Notes
 
-1. **관리자 권한**: 일부 시스템 애플리케이션에서는 관리자 권한이 필요할 수 있습니다
-2. **백그라운드 실행**: 프로그램이 시스템 트레이에서 실행되므로 종료하려면 트레이 아이콘을 우클릭하세요
-3. **키보드 후킹**: 보안 소프트웨어가 키보드 후킹을 차단할 수 있습니다
+1. **Administrator Rights**: May require administrator rights for some system applications
+2. **Background Execution**: Program runs in system tray; right-click tray icon to exit
+3. **Keyboard Hooking**: Security software may block keyboard hooking
 
-## 🐛 문제 해결
+## 🐛 Troubleshooting
 
-### 팝업이 나타나지 않는 경우
+### Popup doesn't appear
 
-- 해당 프로세스가 화이트리스트에 있는지 확인
-- 모니터링 설정이 활성화되어 있는지 확인
-- 관리자 권한으로 실행해보기
+- Check if the process is in the whitelist
+- Verify monitoring settings are enabled
+- Try running with administrator rights
 
-### 붙여넣기가 작동하지 않는 경우
+### Paste doesn't work
 
-- 클립보드에 올바른 데이터가 있는지 확인
-- 프로그램을 재시작해보기
+- Verify correct data is in clipboard
+- Try restarting the program
 
-## 📜 라이센스
+## 📜 License
 
-이 프로젝트는 교육 및 개인 용도로 자유롭게 사용할 수 있습니다.
+This project is free to use for educational and personal purposes.
 
-## 🙋 문의
+## 🙋 Contact
 
-문제가 발생하거나 기능 제안이 있으시면 이슈를 등록해주세요.
+Please submit an issue if you encounter problems or have feature suggestions.
 
 ---
 
-**Paste Guardian** - 클립보드 보안을 한 단계 높이세요! 🚀
+**Paste Guardian** - Elevate your clipboard security! 🚀

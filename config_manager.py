@@ -1,6 +1,6 @@
 """
-설정 관리 모듈
-사용자 설정을 저장하고 불러오는 기능 제공
+Configuration management module
+Provides functionality to save and load user settings
 """
 import json
 import os
@@ -10,7 +10,7 @@ from io import BytesIO
 
 
 class ConfigManager:
-    """애플리케이션 설정을 관리하는 클래스"""
+    """Class to manage application settings"""
     
     def __init__(self, config_file: str = "config.json", history_file: str = "history.json"):
         self.config_file = config_file
@@ -34,7 +34,7 @@ class ConfigManager:
                     # 기본 설정과 병합 (새로운 설정 항목 추가 대응)
                     return {**self.default_config, **loaded_config}
             except Exception as e:
-                print(f"설정 파일 로드 실패: {e}")
+                print(f"Load configuration file 실패: {e}")
                 return self.default_config.copy()
         return self.default_config.copy()
     
@@ -84,9 +84,9 @@ class ConfigManager:
         return True
     
     def save_history(self, history_list: List[Dict[str, Any]]) -> bool:
-        """클립보드 히스토리를 파일에 저장합니다"""
+        """Save clipboard history to file"""
         try:
-            # 이미지를 Base64로 인코딩하여 저장
+            # Save images by encoding to Base64
             serializable_history = []
             for item in history_list:
                 history_item = item.copy()
@@ -104,7 +104,7 @@ class ConfigManager:
                                 img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
                                 history_item["preview"] = img_base64
                         except Exception as e:
-                            print(f"preview 인코딩 실패: {e}")
+                            print(f"preview encoding failed: {e}")
                             history_item["preview"] = None
                     
                     # full_content 인코딩
@@ -118,7 +118,7 @@ class ConfigManager:
                                 img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
                                 history_item["full_content"] = img_base64
                         except Exception as e:
-                            print(f"full_content 인코딩 실패: {e}")
+                            print(f"full_content encoding failed: {e}")
                             history_item["full_content"] = None
                     
                     # content 인코딩
@@ -132,7 +132,7 @@ class ConfigManager:
                                 img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
                                 history_item["content"] = img_base64
                         except Exception as e:
-                            print(f"content 인코딩 실패: {e}")
+                            print(f"content encoding failed: {e}")
                             history_item["content"] = None
                 
                 serializable_history.append(history_item)
@@ -140,16 +140,16 @@ class ConfigManager:
             # JSON 파일로 저장
             with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(serializable_history, f, indent=4, ensure_ascii=False)
-            print(f"✓ {len(serializable_history)}개의 히스토리 항목 저장됨")
+            print(f"✓ {len(serializable_history)} history items saved")
             return True
         except Exception as e:
             import traceback
-            print(f"히스토리 저장 실패: {e}")
-            print(f"상세 오류: {traceback.format_exc()}")
+            print(f"History save failed: {e}")
+            print(f"Detailed error: {traceback.format_exc()}")
             return False
     
     def load_history(self) -> List[Dict[str, Any]]:
-        """저장된 클립보드 히스토리를 불러옵니다"""
+        """Load saved clipboard history"""
         if not os.path.exists(self.history_file):
             return []
         
@@ -157,7 +157,7 @@ class ConfigManager:
             with open(self.history_file, 'r', encoding='utf-8') as f:
                 history_data = json.load(f)
             
-            # Base64로 인코딩된 이미지 복원
+            # Restore Base64 encoded images
             restored_history = []
             for item in history_data:
                 history_item = item.copy()
@@ -171,7 +171,7 @@ class ConfigManager:
                             img = Image.open(BytesIO(img_data))
                             history_item["preview"] = img
                         except Exception as e:
-                            print(f"preview 디코딩 실패: {e}")
+                            print(f"preview decoding failed: {e}")
                             history_item["preview"] = None
                     
                     # full_content 디코딩
@@ -182,7 +182,7 @@ class ConfigManager:
                             img = Image.open(BytesIO(img_data))
                             history_item["full_content"] = img
                         except Exception as e:
-                            print(f"full_content 디코딩 실패: {e}")
+                            print(f"full_content decoding failed: {e}")
                             history_item["full_content"] = None
                     
                     # content 디코딩
@@ -193,12 +193,12 @@ class ConfigManager:
                             img = Image.open(BytesIO(img_data))
                             history_item["content"] = img
                         except Exception as e:
-                            print(f"content 디코딩 실패: {e}")
+                            print(f"content decoding failed: {e}")
                             history_item["content"] = None
                 
                 restored_history.append(history_item)
             
             return restored_history
         except Exception as e:
-            print(f"히스토리 로드 실패: {e}")
+            print(f"History load failed: {e}")
             return []

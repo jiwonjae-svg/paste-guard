@@ -1,6 +1,6 @@
 """
-Paste Guardian - 메인 애플리케이션
-클립보드 붙여넣기 보안 프로그램
+Paste Guardian - Main Application
+Clipboard paste security program
 """
 import customtkinter as ctk
 import threading
@@ -15,81 +15,81 @@ from settings_window import SettingsWindow
 
 
 class PasteGuardian:
-    """메인 애플리케이션 클래스"""
+    """Main application class"""
     
     def __init__(self):
-        # 설정 관리자
+        # Configuration manager
         self.config = ConfigManager()
         
-        # 클립보드 모니터
+        # Clipboard monitor
         self.monitor = ClipboardMonitor(self.on_paste_request)
         
-        # UI 큐 (백그라운드 스레드에서 UI 업데이트용)
+        # UI queue (for UI updates from background threads)
         self.ui_queue = queue.Queue()
         
-        # 시스템 트레이 아이콘
+        # System tray icon
         self.tray_icon = None
         
-        # 설정 창
+        # Settings window
         self.settings_window = None
         
-        # 현재 표시 중인 확인 팝업
+        # Currently displayed confirmation popup
         self.current_popup = None
         
-        # 메인 이벤트 루프 (숨겨진 창)
+        # Main event loop (hidden window)
         self.root = None
         
-        # 클립보드 히스토리 (최근 10개 저장)
+        # Clipboard history (stores recent 10 items)
         self.clipboard_history = []
         
-        # 저장된 히스토리 로드
+        # Load saved history
         self._load_history()
         
     def start(self):
-        """애플리케이션 시작"""
+        """Start the application"""
         print("=" * 50)
-        print("🔒 Paste Guardian 시작")
+        print("🔒 Paste Guardian Starting")
         print("=" * 50)
-        print("✓ 클립보드 모니터링 활성화됨")
-        print("✓ 시스템 트레이 아이콘 생성 중...")
-        print("\n[안내]")
-        print("- 시스템 트레이(작업 표시줄 오른쪽 하단)에서 아이콘을 확인하세요")
-        print("- 아이콘을 우클릭하여 'Settings'를 선택하세요")
-        print("- Ctrl+V를 누르면 확인 팝업이 나타납니다")
+        print("✓ Clipboard monitoring activated")
+        print("✓ Creating system tray icon...")
+        print("\n[Instructions]")
+        print("- Check the icon in system tray (bottom right of taskbar)")
+        print("- Right-click the icon and select 'Settings'")
+        print("- Press Ctrl+V to see confirmation popup")
         print("=" * 50)
         
-        # customtkinter 숨겨진 루트 창 생성
+        # Create hidden customtkinter root window
         self.root = ctk.CTk()
-        self.root.withdraw()  # 창 숨기기
+        self.root.withdraw()  # Hide the window
         
-        # 클립보드 모니터링 시작
+        # Start clipboard monitoring
         self.monitor.start()
         
-        # 시스템 트레이 아이콘 시작 (별도 스레드)
+        # Start system tray icon (in separate thread)
         tray_thread = threading.Thread(target=self._start_tray_icon, daemon=True)
         tray_thread.start()
         
-        # UI 큐 처리
+        # Process UI queue
         self._process_ui_queue()
         
-        # 첫 실행 시 설정 창 자동 표시 (약간의 지연 후)
+        # Auto-show settings window on first run (after slight delay)
         self.root.after(500, lambda: self._show_settings())
         
-        # 메인 루프
+        # Main loop
         self.root.mainloop()
     
     def _start_tray_icon(self):
-        """시스템 트레이 아이콘 시작"""
-        # 아이콘 이미지 생성
+        """Start system tray icon"""
+        # Create icon image
         icon_image = self._create_tray_icon()
         
-        # 메뉴 생성
+        # Create menu
         menu = Menu(
             MenuItem("Settings", self._show_settings),
             MenuItem("Exit", self._quit_application)
         )
         
-        # 트레이 아이콘 생성
+        # Create tray icon
         self.tray_icon = Icon(
             "PasteGuardian",
             icon_image,
@@ -97,23 +97,23 @@ class PasteGuardian:
             menu
         )
         
-        # 트레이 아이콘 실행
+        # Run tray icon
         self.tray_icon.run()
     
     def _create_tray_icon(self):
-        """트레이 아이콘 이미지 생성"""
-        # 간단한 아이콘 생성 (64x64)
+        """Create tray icon image"""
+        # Create simple icon (64x64)
         img = Image.new('RGB', (64, 64), color='#3B82F6')
         draw = ImageDraw.Draw(img)
         
-        # 잠금 아이콘 그리기 (간단한 버전)
+        # Draw lock icon (simple version)
         draw.rectangle([20, 28, 44, 50], fill='white', outline='white')
         draw.ellipse([24, 20, 40, 36], fill='#3B82F6', outline='white', width=3)
         
         return img
     
     def _process_ui_queue(self):
-        """UI 큐 처리 (주기적으로 체크)"""
+        """Process UI queue (check periodically)"""
         try:
             while not self.ui_queue.empty():
                 callback = self.ui_queue.get_nowait()
@@ -121,48 +121,48 @@ class PasteGuardian:
         except queue.Empty:
             pass
         
-        # 100ms마다 다시 체크
+        # Check again every 100ms
         if self.root:
             self.root.after(100, self._process_ui_queue)
     
     def on_paste_request(self, clipboard_data: dict, process_name: str):
-        """붙여넣기 요청 콜백"""
-        print(f"\n[붙여넣기 요청 수신]")
-        print(f"- 프로세스: {process_name}")
-        print(f"- 데이터 타입: {clipboard_data.get('type')}")
+        """Paste request callback"""
+        print(f"\n[Paste Request Received]")
+        print(f"- Process: {process_name}")
+        print(f"- Data Type: {clipboard_data.get('type')}")
         
-        # 화이트리스트 확인
+        # Check whitelist
         if process_name in self.config.get_whitelist():
-            print(f"✓ 화이트리스트 프로세스: {process_name} - 자동 허용")
-            # 화이트리스트도 히스토리에 기록
+            print(f"✓ Whitelisted process: {process_name} - Auto allowed")
+            # Record whitelisted paste to history
             self._add_to_history(clipboard_data, process_name)
             self._allow_paste(clipboard_data)
             return
         
-        # 콘텐츠 타입별 모니터링 확인
+        # Check monitoring status by content type
         content_type = clipboard_data.get("type")
         if not self.config.is_monitoring_enabled(content_type):
-            print(f"✓ {content_type} 모니터링 비활성화 - 자동 허용")
-            # 모니터링 비활성화도 히스토리에 기록
+            print(f"✓ {content_type} monitoring disabled - Auto allowed")
+            # Record to history even when monitoring is disabled
             self._add_to_history(clipboard_data, process_name)
             self._allow_paste(clipboard_data)
             return
         
-        print("→ 확인 팝업 표시 중...")
+        print("→ Showing confirmation popup...")
         
-        # 확인 팝업 표시 (UI 큐에 추가)
+        # Show confirmation popup (add to UI queue)
         def show_popup():
             self._show_confirmation_popup(clipboard_data, process_name)
         
         self.ui_queue.put(show_popup)
     
     def _show_confirmation_popup(self, clipboard_data: dict, process_name: str):
-        """확인 팝업 표시 (반드시 메인 스레드에서 실행)"""
-        print("확인 팝업 생성 중...")
+        """Show confirmation popup (must run in main thread)"""
+        print("Creating confirmation popup...")
         
-        # 메인 스레드가 아니면 UI 큐에 추가
+        # Add to UI queue if not in main thread
         if threading.current_thread() != threading.main_thread():
-            print("백그라운드 스레드에서 호출됨 - UI 큐로 전달")
+            print("Called from background thread - forwarding to UI queue")
             self.ui_queue.put(lambda: self._show_confirmation_popup(clipboard_data, process_name))
             return
         
@@ -182,55 +182,55 @@ class PasteGuardian:
             )
             
             self.current_popup.show()
-            print("✓ 확인 팝업 표시 완료")
+            print("✓ Confirmation popup displayed")
         except Exception as e:
-            print(f"✗ 팝업 표시 오류: {e}")
+            print(f"✗ Popup display error: {e}")
             import traceback
             traceback.print_exc()
     
     def _on_popup_confirm(self, clipboard_data: dict, process_name: str):
-        """팝업 확인 버튼 클릭"""
-        print("붙여넣기 승인")
+        """Popup confirm button clicked"""
+        print("Paste approved")
         
-        # 히스토리에 추가 (실제 붙여넣기 수행 시점)
+        # Add to history (at actual paste time)
         self._add_to_history(clipboard_data, process_name)
         
-        # 팝업 닫기 후 붙여넣기 수행
+        # Close popup and perform paste
         self._allow_paste_with_focus(clipboard_data)
         self.current_popup = None
     
     def _on_popup_always_allow(self, clipboard_data: dict, process_name: str):
-        """팝업 'Always Allow' 버튼 클릭 - 화이트리스트에 추가"""
-        print(f"화이트리스트에 추가: {process_name}")
+        """Popup 'Always Allow' button clicked - add to whitelist"""
+        print(f"Added to whitelist: {process_name}")
         
-        # 화이트리스트에 추가
+        # Add to whitelist
         self.config.add_to_whitelist(process_name)
         
-        # 히스토리에 추가
+        # Add to history
         self._add_to_history(clipboard_data, process_name)
         
-        # 붙여넣기 수행
+        # Perform paste
         self._allow_paste_with_focus(clipboard_data)
         self.current_popup = None
     
     def _on_popup_cancel(self):
-        """팝업 취소 버튼 클릭"""
-        print("붙여넣기 거부")
+        """Popup cancel button clicked"""
+        print("Paste denied")
         self.current_popup = None
     
     def _allow_paste(self, clipboard_data: dict, process_name: str = None):
-        """붙여넣기 허용 (화이트리스트용)"""
-        # 이미 on_paste_request에서 히스토리에 추가했으므로 여기서는 추가하지 않음
+        """Allow paste (for whitelisted processes)"""
+        # Already added to history in on_paste_request, so don't add here
         
         if clipboard_data["type"] == "text":
-            # 텍스트 붙여넣기 수행
+            # Perform text paste
             threading.Thread(
                 target=ClipboardMonitor.perform_paste,
                 args=(clipboard_data["content"],),
                 daemon=True
             ).start()
         elif clipboard_data["type"] == "image":
-            # 이미지 붙여넣기
+            # Perform image paste
             image_data = clipboard_data.get("content")
             if image_data:
                 threading.Thread(
@@ -240,18 +240,18 @@ class PasteGuardian:
                 ).start()
     
     def _allow_paste_with_focus(self, clipboard_data: dict):
-        """포커스 복원을 통한 붙여넣기 허용 (팝업 승인용)"""
+        """Allow paste with focus restoration (for popup approval)"""
         content_type = clipboard_data.get("type")
         
         if content_type == "text":
-            # 텍스트 붙여넣기
+            # Text paste
             threading.Thread(
                 target=ClipboardMonitor.perform_paste_with_focus,
                 args=(clipboard_data["content"], "text", None),
                 daemon=True
             ).start()
         elif content_type == "image":
-            # 이미지 붙여넣기
+            # Image paste
             threading.Thread(
                 target=ClipboardMonitor.perform_paste_with_focus,
                 args=("", "image", clipboard_data.get("content")),
@@ -259,23 +259,23 @@ class PasteGuardian:
             ).start()
     
     def _add_to_history(self, clipboard_data: dict, process_name: str):
-        """클립보드 히스토리에 추가 (최근 10개 유지, 메모리 관리 최적화)"""
+        """Add to clipboard history (keep recent 10 items, memory management optimized)"""
         import time
         
         content_type = clipboard_data.get("type")
         content = clipboard_data.get("content")
         
-        # 이미지의 경우 메모리 관리를 위해 섬네일만 저장
+        # For images, save only thumbnails for memory management
         if content_type == "image" and content:
             try:
-                # 섬네일 생성 (150x150 또는 preview 사용)
+                # Create thumbnail (150x150 or use preview)
                 thumbnail = clipboard_data.get("preview")
                 if not thumbnail and content:
                     from PIL import Image
                     thumbnail = content.copy()
                     thumbnail.thumbnail((150, 150), Image.Resampling.LANCZOS)
                 
-                full_content = thumbnail  # 섬네일로 대체
+                full_content = thumbnail  # Replace with thumbnail
             except:
                 full_content = None
         else:
@@ -285,18 +285,18 @@ class PasteGuardian:
             "timestamp": time.time(),
             "type": content_type,
             "preview": clipboard_data.get("preview", ""),
-            "content": content,  # 원본 콘텐츠 (텍스트) 또는 섬네일 (이미지)
-            "full_content": full_content,  # 전체 콘텐츠
+            "content": content,  # Original content (text) or thumbnail (image)
+            "full_content": full_content,  # Full content
             "process": process_name,
-            "app_name": process_name.replace('.exe', '').title(),  # 프로그램명
+            "app_name": process_name.replace('.exe', '').title(),  # Program name
             "is_sensitive": clipboard_data.get("is_sensitive", False)
         }
         
-        # 최대 10개 유지
+        # Keep maximum 10 items
         if len(self.clipboard_history) >= 10:
-            # 가장 오래된 항목 제거
+            # Remove oldest item
             old_item = self.clipboard_history.pop(0)
-            # 이미지 메모리 해제
+            # Free image memory
             if old_item.get("type") == "image" and old_item.get("full_content"):
                 try:
                     del old_item["full_content"]
@@ -306,44 +306,44 @@ class PasteGuardian:
         
         self.clipboard_history.append(history_item)
         
-        # 히스토리 저장
+        # Save history
         self._save_history()
         
-        # 설정 창이 열려있고 히스토리 탭이 활성화되어 있으면 실시간 갱신
+        # Refresh settings history if settings window is open and history tab is active
         self._refresh_settings_history()
     
     def get_clipboard_history(self):
-        """클립보드 히스토리 반환"""
-        return list(reversed(self.clipboard_history))  # 최신 순
+        """Return clipboard history"""
+        return list(reversed(self.clipboard_history))  # Latest first
     
     def _save_history(self):
-        """히스토리를 파일에 저장"""
+        """Save history to file"""
         try:
             self.config.save_history(self.clipboard_history)
         except Exception as e:
-            print(f"히스토리 저장 실패: {e}")
+            print(f"History save failed: {e}")
     
     def _load_history(self):
-        """저장된 히스토리 로드"""
+        """Load saved history"""
         try:
             self.clipboard_history = self.config.load_history()
-            print(f"✓ {len(self.clipboard_history)}개의 히스토리 항목 로드됨")
+            print(f"✓ {len(self.clipboard_history)} history items loaded")
         except Exception as e:
-            print(f"히스토리 로드 실패: {e}")
+            print(f"History load failed: {e}")
             self.clipboard_history = []
     
     def _refresh_settings_history(self):
-        """설정 창의 히스토리 탭 실시간 갱신"""
+        """Refresh history tab in settings window in real-time"""
         def refresh():
             if (self.settings_window and 
                 self.settings_window.window and 
                 self.settings_window.window.winfo_exists() and
                 hasattr(self.settings_window, 'current_tab') and
                 self.settings_window.current_tab == 'history'):
-                # 히스토리 탭이 활성화되어 있으면 갱신
+                # Refresh if history tab is active
                 self.settings_window.show_history_settings()
         
-        # 메인 스레드에서 실행
+        # Execute in main thread
         if self.root:
             try:
                 self.root.after(0, refresh)
@@ -351,7 +351,7 @@ class PasteGuardian:
                 pass
     
     def _show_settings(self, icon=None, item=None):
-        """설정 창 표시"""
+        """Show settings window"""
         def show():
             if not self.settings_window or not self.settings_window.window or not self.settings_window.window.winfo_exists():
                 self.settings_window = SettingsWindow(self.config, parent=self.root, app=self)
@@ -360,28 +360,28 @@ class PasteGuardian:
                 self.settings_window.window.focus()
                 self.settings_window.window.lift()
         
-        # 메인 스레드에서 직접 실행하거나 큐에 추가
+        # Execute directly in main thread or add to queue
         if self.root and threading.current_thread() == threading.main_thread():
             show()
         else:
             self.ui_queue.put(show)
     
     def _quit_application(self, icon=None, item=None):
-        """애플리케이션 종료"""
-        print("애플리케이션 종료 중...")
+        """Quit application"""
+        print("Quitting application...")
         
-        # 모니터링 중지
+        # Stop monitoring
         self.monitor.stop()
         
-        # 트레이 아이콘 중지
+        # Stop tray icon
         if self.tray_icon:
             self.tray_icon.stop()
         
-        # 설정 및 히스토리 저장
+        # Save configuration and history
         self.config.save_config()
         self._save_history()
         
-        # 메인 루프 종료
+        # Exit main loop
         if self.root:
             self.root.quit()
         
@@ -389,21 +389,21 @@ class PasteGuardian:
 
 
 def main():
-    """메인 함수"""
-    # customtkinter 기본 설정
+    """Main function"""
+    # customtkinter default settings
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
     
-    # 애플리케이션 생성 및 실행
+    # Create and run application
     app = PasteGuardian()
     
     try:
         app.start()
     except KeyboardInterrupt:
-        print("\n키보드 인터럽트 감지")
+        print("\nKeyboard interrupt detected")
         app._quit_application()
     except Exception as e:
-        print(f"오류 발생: {e}")
+        print(f"Error occurred: {e}")
         import traceback
         traceback.print_exc()
 
