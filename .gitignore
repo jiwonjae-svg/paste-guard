@@ -59,9 +59,10 @@ translate_comments.py
 *.bak
 ~$*
 
-# Documentation (except README.md)
+# Documentation (except README.md and BUILD_GUIDE.md)
 *.md
 !README.md
+!BUILD_GUIDE.md
 
 # Test outputs
 repomix-output.xml
