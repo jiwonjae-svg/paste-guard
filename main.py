@@ -5,6 +5,7 @@ Clipboard paste security program
 import customtkinter as ctk
 import threading
 import sys
+import os
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import queue
@@ -12,6 +13,7 @@ from config.config_manager import ConfigManager
 from monitors.clipboard_monitor import ClipboardMonitor
 from ui.confirmation_popup import ConfirmationPopup
 from ui.settings_window import SettingsWindow
+from utils.resource_utils import get_resource_path
 
 
 class PasteGuardian:
@@ -62,6 +64,11 @@ class PasteGuardian:
         self.root = ctk.CTk()
         self.root.withdraw()  # Hide the window
         
+        # Set window icon
+        icon_path = get_resource_path('icon.ico')
+        if os.path.exists(icon_path):
+            self.root.iconbitmap(icon_path)
+        
         # Start clipboard monitoring
         self.monitor.start()
         
@@ -80,8 +87,14 @@ class PasteGuardian:
     
     def _start_tray_icon(self):
         """Start system tray icon"""
-        # Create icon image
-        icon_image = self._create_tray_icon()
+        # Load icon from file
+        icon_path = get_resource_path('icon.ico')
+        
+        # Use icon.ico if exists, otherwise create default
+        if os.path.exists(icon_path):
+            icon_image = Image.open(icon_path)
+        else:
+            icon_image = self._create_tray_icon()
         
         # Create menu
         menu = Menu(
@@ -101,7 +114,7 @@ class PasteGuardian:
         self.tray_icon.run()
     
     def _create_tray_icon(self):
-        """Create tray icon image"""
+        """Create tray icon image (fallback)"""
         # Create simple icon (64x64)
         img = Image.new('RGB', (64, 64), color='#3B82F6')
         draw = ImageDraw.Draw(img)

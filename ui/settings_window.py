@@ -12,6 +12,7 @@ import win32ui
 import win32gui
 from PIL import Image
 import io
+from utils.resource_utils import get_resource_path
 
 class SettingsWindow:
     """Settings window class"""
@@ -44,6 +45,11 @@ class SettingsWindow:
             
         self.window.title("Paste Guardian - Settings")
         self.window.geometry("900x600")
+        
+        # Set window icon
+        icon_path = get_resource_path('icon.ico')
+        if os.path.exists(icon_path):
+            self.window.iconbitmap(icon_path)
         
         # Theme settings
         ctk.set_appearance_mode("dark")

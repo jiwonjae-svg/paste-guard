@@ -9,7 +9,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('icon.ico', '.')],
     hiddenimports=[
         'customtkinter',
         'pynput',
@@ -58,5 +58,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None  # Add icon file path here if you have one
+    icon='icon.ico'  # Application icon
 )
