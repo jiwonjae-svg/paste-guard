@@ -75,10 +75,8 @@ class PasteGuardian:
         self.root = ctk.CTk()
         self.root.withdraw()  # Hide the window
         
-        # Set window icon
-        icon_path = get_resource_path('icon.ico')
-        if os.path.exists(icon_path):
-            self.root.iconbitmap(icon_path)
+        # Set window icon with delayed application for Windows 11 stability
+        self.root.after(200, self._apply_window_icon)
         
         # Start clipboard monitoring
         self.monitor.start()
@@ -156,6 +154,40 @@ class PasteGuardian:
         draw.ellipse([24, 20, 40, 36], fill='#3B82F6', outline='white', width=3)
         
         return img
+    
+    def _apply_window_icon(self):
+        """Apply icon to window with error handling (Windows 11 compatible)"""
+        try:
+            icon_path = get_resource_path('icon.ico')
+            
+            # Verify path and file existence
+            print(f"[Icon] Attempting to load: {icon_path}")
+            
+            if not os.path.exists(icon_path):
+                print(f"[Icon] ✗ File not found: {icon_path}")
+                return
+            
+            # Verify it's actually an .ico file
+            if not icon_path.lower().endswith('.ico'):
+                print(f"[Icon] ✗ Not a .ico file: {icon_path}")
+                return
+            
+            # Check file size (should be > 0)
+            file_size = os.path.getsize(icon_path)
+            if file_size == 0:
+                print(f"[Icon] ✗ Empty file: {icon_path}")
+                return
+            
+            print(f"[Icon] ✓ File verified ({file_size} bytes)")
+            
+            # Apply icon to root window
+            self.root.iconbitmap(icon_path)
+            print(f"[Icon] ✓ Successfully applied to main window")
+            
+        except Exception as e:
+            print(f"[Icon] ✗ Failed to apply icon: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _process_ui_queue(self):
         """Process UI queue (check periodically)"""
@@ -468,29 +500,37 @@ class PasteGuardian:
 def main():
     """Main function"""
     # Check for duplicate instance (single instance only)
-    mutex_name = "Global\\PasteGuardian_SingleInstance_Mutex"
-    mutex = win32event.CreateMutex(None, False, mutex_name)
-    last_error = win32api.GetLastError()
+    # Skip check if DEV_MODE environment variable is set
+    dev_mode = os.environ.get('PASTE_GUARDIAN_DEV_MODE', '').lower() in ('1', 'true', 'yes')
     
-    if last_error == winerror.ERROR_ALREADY_EXISTS:
-        print("✗ Paste Guardian is already running!")
-        print("Check the system tray icon.")
+    if not dev_mode:
+        mutex_name = "Global\\PasteGuardian_SingleInstance_Mutex"
+        mutex = win32event.CreateMutex(None, False, mutex_name)
+        last_error = win32api.GetLastError()
         
-        # Show toast notification
-        try:
-            toast = ToastNotifier()
-            icon_path = get_resource_path('icon.ico')
-            toast.show_toast(
-                "Paste Guardian",
-                "Application is already running!\nCheck the system tray.",
-                icon_path=icon_path if os.path.exists(icon_path) else None,
-                duration=5
-            )
-        except:
-            pass
-        
-        win32api.CloseHandle(mutex)
-        sys.exit(1)
+        if last_error == winerror.ERROR_ALREADY_EXISTS:
+            print("✗ Paste Guardian is already running!")
+            print("Check the system tray icon.")
+            print("\nTip: Set PASTE_GUARDIAN_DEV_MODE=1 to allow multiple instances during development")
+            
+            # Show toast notification
+            try:
+                toast = ToastNotifier()
+                icon_path = get_resource_path('icon.ico')
+                toast.show_toast(
+                    "Paste Guardian",
+                    "Application is already running!\nCheck the system tray.",
+                    icon_path=icon_path if os.path.exists(icon_path) else None,
+                    duration=5
+                )
+            except:
+                pass
+            
+            win32api.CloseHandle(mutex)
+            sys.exit(1)
+    else:
+        print("⚠ Development mode: Multiple instances allowed")
+        mutex = None
     
     # customtkinter default settings
     ctk.set_appearance_mode("dark")
@@ -510,10 +550,11 @@ def main():
         traceback.print_exc()
     finally:
         # Release mutex
-        try:
-            win32api.CloseHandle(mutex)
-        except:
-            pass
+        if not dev_mode and mutex:
+            try:
+                win32api.CloseHandle(mutex)
+            except:
+                pass
 
 
 if __name__ == "__main__":

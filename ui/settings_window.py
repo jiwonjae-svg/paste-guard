@@ -46,10 +46,8 @@ class SettingsWindow:
         self.window.title("Paste Guardian - Settings")
         self.window.geometry("900x600")
         
-        # Set window icon
-        icon_path = get_resource_path('icon.ico')
-        if os.path.exists(icon_path):
-            self.window.iconbitmap(icon_path)
+        # Set window icon with delayed application for Windows 11 stability
+        self.window.after(200, lambda: self._apply_window_icon(self.window))
         
         # Theme settings
         ctk.set_appearance_mode("dark")
@@ -911,6 +909,40 @@ class SettingsWindow:
         """Remove whitelist item"""
         self.config.remove_from_whitelist(process_name)
         self._refresh_whitelist()
+    
+    def _apply_window_icon(self, window):
+        """Apply icon to window with error handling (Windows 11 compatible)"""
+        try:
+            icon_path = get_resource_path('icon.ico')
+            
+            # Verify path and file existence
+            print(f"[Settings Icon] Attempting to load: {icon_path}")
+            
+            if not os.path.exists(icon_path):
+                print(f"[Settings Icon] ✗ File not found: {icon_path}")
+                return
+            
+            # Verify it's actually an .ico file
+            if not icon_path.lower().endswith('.ico'):
+                print(f"[Settings Icon] ✗ Not a .ico file: {icon_path}")
+                return
+            
+            # Check file size (should be > 0)
+            file_size = os.path.getsize(icon_path)
+            if file_size == 0:
+                print(f"[Settings Icon] ✗ Empty file: {icon_path}")
+                return
+            
+            print(f"[Settings Icon] ✓ File verified ({file_size} bytes)")
+            
+            # Apply icon to window
+            window.iconbitmap(icon_path)
+            print(f"[Settings Icon] ✓ Successfully applied to settings window")
+            
+        except Exception as e:
+            print(f"[Settings Icon] ✗ Failed to apply icon: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _on_window_close(self):
         """Window close event"""
