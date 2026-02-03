@@ -21,8 +21,7 @@ class ConfigManager:
             "whitelist": [],
             "popup_opacity": 0.95,
             "theme": "dark",
-            "accent_color": "#3B82F6",
-            "first_run": True  # First run detection flag
+            "accent_color": "#3B82F6"
         }
         self.config = self.load_config()
     
