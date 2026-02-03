@@ -1,5 +1,18 @@
 @echo off
-REM Build Paste Guardian executable
+REM ==============================================================================
+REM Paste Guardian Build Script
+REM ==============================================================================
+REM 
+REM Builds PasteGuardian.exe with embedded icon.ico
+REM 
+REM Icon Cache Refresh (if icon doesn't update):
+REM   Method 1: del /f /s /q /a "%LocalAppData%\IconCache.db"
+REM   Method 2: taskkill /f /im explorer.exe && start explorer.exe
+REM   Method 3: ie4uinit.exe -ClearIconCache
+REM   Method 4: Run refresh_icon_cache.ps1
+REM
+REM ==============================================================================
+
 echo ================================================
 echo Building Paste Guardian
 echo ================================================
@@ -13,27 +26,10 @@ if exist "PasteGuardian.exe" del /q "PasteGuardian.exe"
 echo Done.
 echo.
 
-REM Build with PyInstaller
-echo [2/3] Building executable...
-pyinstaller --clean --onefile --noconsole --name PasteGuardian ^
-    --icon=icon.ico ^
-    --hidden-import=customtkinter ^
-    --hidden-import=pynput ^
-    --hidden-import=pyperclip ^
-    --hidden-import=psutil ^
-    --hidden-import=pystray ^
-    --hidden-import=PIL ^
-    --hidden-import=PIL.ImageGrab ^
-    --hidden-import=win32api ^
-    --hidden-import=win32con ^
-    --hidden-import=win32gui ^
-    --hidden-import=win32ui ^
-    --hidden-import=win32process ^
-    --hidden-import=win32clipboard ^
-    --hidden-import=win32event ^
-    --hidden-import=winerror ^
-    --hidden-import=win10toast ^
-    main.py
+REM Build with PyInstaller using spec file
+echo [2/3] Building executable with embedded icon...
+echo Using: build.spec (icon=icon.ico)
+pyinstaller build.spec
 
 if %errorlevel% neq 0 (
     echo.
@@ -53,7 +49,14 @@ if exist "dist\PasteGuardian.exe" (
     echo ================================================
     echo Build completed successfully!
     echo Executable: PasteGuardian.exe
+    echo Icon: Embedded (icon.ico)
     echo ================================================
+    echo.
+    echo [TIP] If icon doesn't show in Windows Explorer:
+    echo   1. Run: refresh_icon_cache.ps1 (PowerShell)
+    echo   2. Or manually: del /f /s /q /a "%%LocalAppData%%\IconCache.db"
+    echo   3. Then restart: taskkill /f /im explorer.exe ^&^& start explorer.exe
+    echo.
 ) else (
     echo ERROR: Executable not found!
 )

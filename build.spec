@@ -55,10 +55,23 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # No console window
+    console=False,  # No console window (GUI application)
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico'  # Application icon
+    # =========================================================================
+    # ICON CONFIGURATION - Embeds icon.ico into the .exe file
+    # =========================================================================
+    # This sets the icon that appears in Windows Explorer, taskbar, etc.
+    # File must exist in project root: icon.ico
+    # 
+    # If icon doesn't update after build:
+    # 1. Delete Windows icon cache:
+    #    del /f /s /q /a "%LocalAppData%\IconCache.db"
+    # 2. Restart Windows Explorer:
+    #    taskkill /f /im explorer.exe && start explorer.exe
+    # 3. Or use: ie4uinit.exe -ClearIconCache
+    # =========================================================================
+    icon='icon.ico'  # Path to icon file (relative to project root)
 )
