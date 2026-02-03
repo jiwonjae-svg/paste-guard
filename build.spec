@@ -25,7 +25,9 @@ a = Analysis(
         'win32ui',
         'win32process',
         'win32clipboard',
-        'win32event'
+        'win32event',
+        'winerror',
+        'win10toast'
     ],
     hookspath=[],
     hooksconfig={},

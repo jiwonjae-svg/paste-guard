@@ -6,9 +6,13 @@ import customtkinter as ctk
 import threading
 import sys
 import os
+import win32event
+import win32api
+import winerror
 from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import queue
+from win10toast import ToastNotifier
 from config.config_manager import ConfigManager
 from monitors.clipboard_monitor import ClipboardMonitor
 from ui.confirmation_popup import ConfirmationPopup
@@ -43,6 +47,13 @@ class PasteGuardian:
         
         # Clipboard history (stores recent 10 items)
         self.clipboard_history = []
+        
+        # Thread synchronization locks
+        self.history_lock = threading.Lock()
+        self.config_lock = threading.Lock()
+        
+        # Toast notifier for Windows notifications
+        self.toast = ToastNotifier()
         
         # Load saved history
         self._load_history()
@@ -92,15 +103,18 @@ class PasteGuardian:
         
         # Use icon.ico if exists, otherwise create default
         if os.path.exists(icon_path):
-            icon_image = Image.open(icon_path)
+            try:
+                icon_image = Image.open(icon_path)
+                # Resize to 64x64 for tray icon
+                icon_image = icon_image.resize((64, 64), Image.Resampling.LANCZOS)
+            except Exception as e:
+                print(f"Warning: Failed to load icon.ico: {e}")
+                icon_image = self._create_tray_icon()
         else:
             icon_image = self._create_tray_icon()
         
-        # Create menu
-        menu = Menu(
-            MenuItem("Settings", self._show_settings),
-            MenuItem("Exit", self._quit_application)
-        )
+        # Create dynamic menu with whitelist count
+        menu = self._create_tray_menu()
         
         # Create tray icon
         self.tray_icon = Icon(
@@ -112,6 +126,24 @@ class PasteGuardian:
         
         # Run tray icon
         self.tray_icon.run()
+    
+    def _create_tray_menu(self):
+        """Create dynamic tray menu with whitelist count"""
+        with self.config_lock:
+            whitelist_count = len(self.config.get_whitelist())
+        
+        return Menu(
+            MenuItem(f"Whitelist: {whitelist_count} apps", None, enabled=False),
+            Menu.SEPARATOR,
+            MenuItem("Settings", self._show_settings),
+            MenuItem("Exit", self._quit_application)
+        )
+    
+    def _update_tray_menu(self):
+        """Update tray menu dynamically (e.g., when whitelist changes)"""
+        if self.tray_icon:
+            self.tray_icon.menu = self._create_tray_menu()
+            self.tray_icon.update_menu()
     
     def _create_tray_icon(self):
         """Create tray icon image (fallback)"""
@@ -145,7 +177,10 @@ class PasteGuardian:
         print(f"- Data Type: {clipboard_data.get('type')}")
         
         # Check whitelist
-        if process_name in self.config.get_whitelist():
+        with self.config_lock:
+            is_whitelisted = process_name in self.config.get_whitelist()
+        
+        if is_whitelisted:
             print(f"✓ Whitelisted process: {process_name} - Auto allowed")
             # Record whitelisted paste to history
             self._add_to_history(clipboard_data, process_name)
@@ -163,11 +198,34 @@ class PasteGuardian:
         
         print("→ Showing confirmation popup...")
         
+        # Show toast notification for blocked paste attempt
+        self._show_toast_notification(process_name, content_type)
+        
         # Show confirmation popup (add to UI queue)
         def show_popup():
             self._show_confirmation_popup(clipboard_data, process_name)
         
         self.ui_queue.put(show_popup)
+    
+    def _show_toast_notification(self, process_name: str, content_type: str):
+        """Show Windows toast notification for paste detection"""
+        def show_toast():
+            try:
+                app_name = process_name.replace('.exe', '').title()
+                icon_path = get_resource_path('icon.ico')
+                
+                self.toast.show_toast(
+                    "Paste Guardian",
+                    f"Paste detected in {app_name}\nType: {content_type}",
+                    icon_path=icon_path if os.path.exists(icon_path) else None,
+                    duration=3,
+                    threaded=True
+                )
+            except Exception as e:
+                print(f"Toast notification error: {e}")
+        
+        # Run in separate thread to avoid blocking
+        threading.Thread(target=show_toast, daemon=True).start()
     
     def _show_confirmation_popup(self, clipboard_data: dict, process_name: str):
         """Show confirmation popup (must run in main thread)"""
@@ -216,8 +274,12 @@ class PasteGuardian:
         """Popup 'Always Allow' button clicked - add to whitelist"""
         print(f"Added to whitelist: {process_name}")
         
-        # Add to whitelist
-        self.config.add_to_whitelist(process_name)
+        # Add to whitelist (thread-safe)
+        with self.config_lock:
+            self.config.add_to_whitelist(process_name)
+        
+        # Update tray menu to reflect new whitelist count
+        self._update_tray_menu()
         
         # Add to history
         self._add_to_history(clipboard_data, process_name)
@@ -275,49 +337,50 @@ class PasteGuardian:
         """Add to clipboard history (keep recent 10 items, memory management optimized)"""
         import time
         
-        content_type = clipboard_data.get("type")
-        content = clipboard_data.get("content")
-        
-        # For images, save only thumbnails for memory management
-        if content_type == "image" and content:
-            try:
-                # Create thumbnail (150x150 or use preview)
-                thumbnail = clipboard_data.get("preview")
-                if not thumbnail and content:
-                    from PIL import Image
-                    thumbnail = content.copy()
-                    thumbnail.thumbnail((150, 150), Image.Resampling.LANCZOS)
-                
-                full_content = thumbnail  # Replace with thumbnail
-            except:
-                full_content = None
-        else:
-            full_content = content
-        
-        history_item = {
-            "timestamp": time.time(),
-            "type": content_type,
-            "preview": clipboard_data.get("preview", ""),
-            "content": content,  # Original content (text) or thumbnail (image)
-            "full_content": full_content,  # Full content
-            "process": process_name,
-            "app_name": process_name.replace('.exe', '').title(),  # Program name
-            "is_sensitive": clipboard_data.get("is_sensitive", False)
-        }
-        
-        # Keep maximum 10 items
-        if len(self.clipboard_history) >= 10:
-            # Remove oldest item
-            old_item = self.clipboard_history.pop(0)
-            # Free image memory
-            if old_item.get("type") == "image" and old_item.get("full_content"):
+        with self.history_lock:  # Thread-safe access
+            content_type = clipboard_data.get("type")
+            content = clipboard_data.get("content")
+            
+            # For images, save only thumbnails for memory management
+            if content_type == "image" and content:
                 try:
-                    del old_item["full_content"]
-                    del old_item["content"]
+                    # Create thumbnail (150x150 or use preview)
+                    thumbnail = clipboard_data.get("preview")
+                    if not thumbnail and content:
+                        from PIL import Image
+                        thumbnail = content.copy()
+                        thumbnail.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                    
+                    full_content = thumbnail  # Replace with thumbnail
                 except:
-                    pass
-        
-        self.clipboard_history.append(history_item)
+                    full_content = None
+            else:
+                full_content = content
+            
+            history_item = {
+                "timestamp": time.time(),
+                "type": content_type,
+                "preview": clipboard_data.get("preview", ""),
+                "content": content,  # Original content (text) or thumbnail (image)
+                "full_content": full_content,  # Full content
+                "process": process_name,
+                "app_name": process_name.replace('.exe', '').title(),  # Program name
+                "is_sensitive": clipboard_data.get("is_sensitive", False)
+            }
+            
+            # Keep maximum 10 items
+            if len(self.clipboard_history) >= 10:
+                # Remove oldest item
+                old_item = self.clipboard_history.pop(0)
+                # Free image memory
+                if old_item.get("type") == "image" and old_item.get("full_content"):
+                    try:
+                        del old_item["full_content"]
+                        del old_item["content"]
+                    except:
+                        pass
+            
+            self.clipboard_history.append(history_item)
         
         # Save history
         self._save_history()
@@ -327,7 +390,8 @@ class PasteGuardian:
     
     def get_clipboard_history(self):
         """Return clipboard history"""
-        return list(reversed(self.clipboard_history))  # Latest first
+        with self.history_lock:  # Thread-safe access
+            return list(reversed(self.clipboard_history))  # Latest first
     
     def _save_history(self):
         """Save history to file"""
@@ -403,6 +467,31 @@ class PasteGuardian:
 
 def main():
     """Main function"""
+    # Check for duplicate instance (single instance only)
+    mutex_name = "Global\\PasteGuardian_SingleInstance_Mutex"
+    mutex = win32event.CreateMutex(None, False, mutex_name)
+    last_error = win32api.GetLastError()
+    
+    if last_error == winerror.ERROR_ALREADY_EXISTS:
+        print("✗ Paste Guardian is already running!")
+        print("Check the system tray icon.")
+        
+        # Show toast notification
+        try:
+            toast = ToastNotifier()
+            icon_path = get_resource_path('icon.ico')
+            toast.show_toast(
+                "Paste Guardian",
+                "Application is already running!\nCheck the system tray.",
+                icon_path=icon_path if os.path.exists(icon_path) else None,
+                duration=5
+            )
+        except:
+            pass
+        
+        win32api.CloseHandle(mutex)
+        sys.exit(1)
+    
     # customtkinter default settings
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
@@ -419,6 +508,12 @@ def main():
         print(f"Error occurred: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # Release mutex
+        try:
+            win32api.CloseHandle(mutex)
+        except:
+            pass
 
 
 if __name__ == "__main__":
