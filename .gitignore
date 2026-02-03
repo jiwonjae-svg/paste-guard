@@ -59,10 +59,14 @@ translate_comments.py
 *.bak
 ~$*
 
-# Documentation (except README.md and BUILD_GUIDE.md)
+# Documentation (except README.md)
 *.md
 !README.md
-!BUILD_GUIDE.md
+
+# Build utilities (local only)
+refresh_icon_cache.ps1
+BUILD_GUIDE.md
+build_quick.bat
 
 # Test outputs
 repomix-output.xml
