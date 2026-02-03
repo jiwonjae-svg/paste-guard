@@ -16,6 +16,7 @@ echo.
 REM Build with PyInstaller
 echo [2/3] Building executable...
 pyinstaller --clean --onefile --noconsole --name PasteGuardian ^
+    --icon=icon.ico ^
     --hidden-import=customtkinter ^
     --hidden-import=pynput ^
     --hidden-import=pyperclip ^
@@ -30,6 +31,8 @@ pyinstaller --clean --onefile --noconsole --name PasteGuardian ^
     --hidden-import=win32process ^
     --hidden-import=win32clipboard ^
     --hidden-import=win32event ^
+    --hidden-import=winerror ^
+    --hidden-import=win10toast ^
     main.py
 
 if %errorlevel% neq 0 (

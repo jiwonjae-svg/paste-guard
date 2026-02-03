@@ -17,7 +17,7 @@ from config.config_manager import ConfigManager
 from monitors.clipboard_monitor import ClipboardMonitor
 from ui.confirmation_popup import ConfirmationPopup
 from ui.settings_window import SettingsWindow
-from utils.resource_utils import get_resource_path
+from utils.icon_utils import get_icon_path, get_icon_image
 
 
 class PasteGuardian:
@@ -96,20 +96,21 @@ class PasteGuardian:
     
     def _start_tray_icon(self):
         """Start system tray icon"""
-        # Load icon from file
-        icon_path = get_resource_path('icon.ico')
+        # Load icon from embedded data
+        icon_image = get_icon_image()
         
-        # Use icon.ico if exists, otherwise create default
-        if os.path.exists(icon_path):
-            try:
-                icon_image = Image.open(icon_path)
-                # Resize to 64x64 for tray icon
-                icon_image = icon_image.resize((64, 64), Image.Resampling.LANCZOS)
-            except Exception as e:
-                print(f"Warning: Failed to load icon.ico: {e}")
-                icon_image = self._create_tray_icon()
-        else:
+        # Use embedded icon if available, otherwise create default
+        if icon_image is None:
+            print("[Tray] Using fallback icon")
             icon_image = self._create_tray_icon()
+        else:
+            # Resize to 64x64 for tray icon
+            try:
+                icon_image = icon_image.resize((64, 64), Image.Resampling.LANCZOS)
+                print("[Tray] ✓ Embedded icon loaded successfully")
+            except Exception as e:
+                print(f"[Tray] Resize failed: {e}, using fallback")
+                icon_image = self._create_tray_icon()
         
         # Create dynamic menu with whitelist count
         menu = self._create_tray_menu()
@@ -158,27 +159,25 @@ class PasteGuardian:
     def _apply_window_icon(self):
         """Apply icon to window with error handling (Windows 11 compatible)"""
         try:
-            icon_path = get_resource_path('icon.ico')
+            # Get icon path from embedded data
+            icon_path = get_icon_path()
             
-            # Verify path and file existence
-            print(f"[Icon] Attempting to load: {icon_path}")
+            if not icon_path:
+                print("[Icon] ✗ Failed to get icon path")
+                return
             
+            # Verify file existence
             if not os.path.exists(icon_path):
-                print(f"[Icon] ✗ File not found: {icon_path}")
+                print(f"[Icon] ✗ Temporary icon file not found: {icon_path}")
                 return
             
-            # Verify it's actually an .ico file
-            if not icon_path.lower().endswith('.ico'):
-                print(f"[Icon] ✗ Not a .ico file: {icon_path}")
-                return
-            
-            # Check file size (should be > 0)
+            # Check file size
             file_size = os.path.getsize(icon_path)
             if file_size == 0:
-                print(f"[Icon] ✗ Empty file: {icon_path}")
+                print(f"[Icon] ✗ Empty icon file: {icon_path}")
                 return
             
-            print(f"[Icon] ✓ File verified ({file_size} bytes)")
+            print(f"[Icon] ✓ Icon file verified ({file_size} bytes)")
             
             # Apply icon to root window
             self.root.iconbitmap(icon_path)
@@ -244,12 +243,12 @@ class PasteGuardian:
         def show_toast():
             try:
                 app_name = process_name.replace('.exe', '').title()
-                icon_path = get_resource_path('icon.ico')
+                icon_path = get_icon_path()
                 
                 self.toast.show_toast(
                     "Paste Guardian",
                     f"Paste detected in {app_name}\nType: {content_type}",
-                    icon_path=icon_path if os.path.exists(icon_path) else None,
+                    icon_path=icon_path,
                     duration=3,
                     threaded=True
                 )
@@ -516,11 +515,11 @@ def main():
             # Show toast notification
             try:
                 toast = ToastNotifier()
-                icon_path = get_resource_path('icon.ico')
+                icon_path = get_icon_path()
                 toast.show_toast(
                     "Paste Guardian",
                     "Application is already running!\nCheck the system tray.",
-                    icon_path=icon_path if os.path.exists(icon_path) else None,
+                    icon_path=icon_path,
                     duration=5
                 )
             except:

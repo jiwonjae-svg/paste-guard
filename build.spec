@@ -1,5 +1,5 @@
 # Build configuration for Paste Guardian
-# PyInstaller spec file
+# PyInstaller spec file - Single file build with embedded icon
 
 # -*- mode: python ; coding: utf-8 -*-
 
@@ -9,7 +9,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('icon.ico', '.')],
+    datas=[],  # No external data files needed - icon is embedded in code
     hiddenimports=[
         'customtkinter',
         'pynput',

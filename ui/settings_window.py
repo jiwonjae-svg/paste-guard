@@ -12,7 +12,7 @@ import win32ui
 import win32gui
 from PIL import Image
 import io
-from utils.resource_utils import get_resource_path
+from utils.icon_utils import get_icon_path
 
 class SettingsWindow:
     """Settings window class"""
@@ -913,27 +913,25 @@ class SettingsWindow:
     def _apply_window_icon(self, window):
         """Apply icon to window with error handling (Windows 11 compatible)"""
         try:
-            icon_path = get_resource_path('icon.ico')
+            # Get icon path from embedded data
+            icon_path = get_icon_path()
             
-            # Verify path and file existence
-            print(f"[Settings Icon] Attempting to load: {icon_path}")
+            if not icon_path:
+                print("[Settings Icon] ✗ Failed to get icon path")
+                return
             
+            # Verify file existence
             if not os.path.exists(icon_path):
-                print(f"[Settings Icon] ✗ File not found: {icon_path}")
+                print(f"[Settings Icon] ✗ Temporary icon file not found: {icon_path}")
                 return
             
-            # Verify it's actually an .ico file
-            if not icon_path.lower().endswith('.ico'):
-                print(f"[Settings Icon] ✗ Not a .ico file: {icon_path}")
-                return
-            
-            # Check file size (should be > 0)
+            # Check file size
             file_size = os.path.getsize(icon_path)
             if file_size == 0:
-                print(f"[Settings Icon] ✗ Empty file: {icon_path}")
+                print(f"[Settings Icon] ✗ Empty icon file: {icon_path}")
                 return
             
-            print(f"[Settings Icon] ✓ File verified ({file_size} bytes)")
+            print(f"[Settings Icon] ✓ Icon file verified ({file_size} bytes)")
             
             # Apply icon to window
             window.iconbitmap(icon_path)
