@@ -88,8 +88,8 @@ class PasteGuardian:
         # Process UI queue
         self._process_ui_queue()
         
-        # Auto-show settings window on first run (after slight delay)
-        self.root.after(500, lambda: self._show_settings())
+        # Check and show first run welcome dialog
+        self.root.after(1000, self._check_first_run)
         
         # Main loop
         self.root.mainloop()
@@ -155,6 +155,119 @@ class PasteGuardian:
         draw.ellipse([24, 20, 40, 36], fill='#3B82F6', outline='white', width=3)
         
         return img
+    
+    def _check_first_run(self):
+        """Check if this is the first run and show welcome dialog"""
+        try:
+            is_first_run = self.config.get("first_run", True)
+            
+            if is_first_run:
+                print("[First Run] Showing welcome dialog...")
+                self._show_welcome_dialog()
+                # Mark as not first run
+                self.config.set("first_run", False)
+                print("[First Run] Marked as completed")
+        except Exception as e:
+            print(f"[First Run] Error checking first run: {e}")
+    
+    def _show_welcome_dialog(self):
+        """Show welcome dialog for first-time users"""
+        try:
+            # Create welcome dialog window
+            welcome = ctk.CTkToplevel(self.root)
+            welcome.title("Welcome to Paste Guardian")
+            welcome.geometry("480x320")
+            welcome.resizable(False, False)
+            
+            # Apply icon
+            try:
+                icon_path = get_icon_path()
+                if icon_path and os.path.exists(icon_path):
+                    welcome.iconbitmap(icon_path)
+            except:
+                pass
+            
+            # Center window on screen
+            welcome.update_idletasks()
+            width = welcome.winfo_width()
+            height = welcome.winfo_height()
+            x = (welcome.winfo_screenwidth() // 2) - (width // 2)
+            y = (welcome.winfo_screenheight() // 2) - (height // 2)
+            welcome.geometry(f"{width}x{height}+{x}+{y}")
+            
+            # Make window always on top
+            welcome.attributes('-topmost', True)
+            
+            # Main container
+            container = ctk.CTkFrame(welcome, fg_color="#1E1E1E")
+            container.pack(fill="both", expand=True, padx=20, pady=20)
+            
+            # Title with icon emoji
+            title = ctk.CTkLabel(
+                container,
+                text="🔒 Welcome to Paste Guardian!",
+                font=("Segoe UI", 24, "bold"),
+                text_color="#3B82F6"
+            )
+            title.pack(pady=(10, 20))
+            
+            # Message content
+            messages = [
+                "✓ Running in System Tray",
+                "   Look for the 🔒 icon in your taskbar",
+                "",
+                "✓ Press Ctrl+V Anywhere",
+                "   Preview clipboard content before pasting",
+                "",
+                "✓ Customize Settings",
+                "   Right-click tray icon → Settings",
+                "",
+                "🔐 Your data is encrypted and stays local"
+            ]
+            
+            message_frame = ctk.CTkFrame(container, fg_color="#2A2A2A", corner_radius=10)
+            message_frame.pack(fill="both", expand=True, pady=(0, 15))
+            
+            for msg in messages:
+                msg_label = ctk.CTkLabel(
+                    message_frame,
+                    text=msg,
+                    font=("Segoe UI", 13 if msg.startswith(("✓", "🔐")) else 12),
+                    text_color="#FFFFFF" if msg.startswith(("✓", "🔐")) else "#A0A0A0",
+                    anchor="w"
+                )
+                msg_label.pack(anchor="w", padx=20, pady=2)
+            
+            # Button frame
+            button_frame = ctk.CTkFrame(container, fg_color="transparent")
+            button_frame.pack(fill="x", pady=(10, 0))
+            
+            # Got it button
+            def close_dialog():
+                welcome.destroy()
+                print("[First Run] Welcome dialog closed")
+            
+            got_it_btn = ctk.CTkButton(
+                button_frame,
+                text="Got it! ✓",
+                font=("Segoe UI", 14, "bold"),
+                fg_color="#3B82F6",
+                hover_color="#2563EB",
+                height=40,
+                command=close_dialog
+            )
+            got_it_btn.pack(side="right")
+            
+            # Bind ESC key to close
+            welcome.bind("<Escape>", lambda e: close_dialog())
+            
+            # Focus window
+            welcome.focus_force()
+            
+        except Exception as e:
+            print(f"[First Run] Error showing welcome dialog: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _apply_window_icon(self):
         """Apply icon to window with error handling (Windows 11 compatible)"""

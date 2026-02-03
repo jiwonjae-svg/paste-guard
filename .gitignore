@@ -1,9 +1,19 @@
-# Python
+# ============================================================================
+# Paste Guardian - Git Ignore Configuration
+# ============================================================================
+
+# ============================================================================
+# Python Runtime
+# ============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# ============================================================================
+# Build & Distribution
+# ============================================================================
 build/
 develop-eggs/
 dist/
@@ -19,56 +29,167 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual Environment
+# ============================================================================
+# Virtual Environments
+# ============================================================================
 venv/
 .venv/
 ENV/
 env/
+.virtualenv/
 
-# IDE
+# ============================================================================
+# IDE & Editors
+# ============================================================================
+# VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm
 .idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
 *~
 
-# Configuration files (may vary per user)
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# User Configuration & Runtime Data
+# ============================================================================
+# These files are user-specific and should not be committed
 config.json
 history.json
 
-# Log files
+# ============================================================================
+# Logs & Temporary Files
+# ============================================================================
 *.log
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# PyInstaller
-*.spec
-!build.spec
-PasteGuardian.spec
-
-# Build artifacts
-PasteGuardian.exe
-translate_comments.py
-
-# Temporary files
 *.tmp
 *.bak
 ~$*
+*.pid
 
-# Documentation (except README.md)
-*.md
-!README.md
+# ============================================================================
+# Operating System
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# Build utilities (local only)
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================================================
+# PyInstaller Build Artifacts
+# ============================================================================
+# Keep build.spec (our main build configuration)
+# Ignore all other generated .spec files
+*.spec
+!build.spec
+
+# Final executable output
+PasteGuardian.exe
+
+# ============================================================================
+# Build Utilities (Local Development Only)
+# ============================================================================
+# These files are helpful for developers but should not be in the repository
 refresh_icon_cache.ps1
 BUILD_GUIDE.md
 build_quick.bat
 
+# ============================================================================
+# Documentation (Keep Only Essential)
+# ============================================================================
+# Keep README.md and LICENSE
+# Ignore all other markdown documentation
+*.md
+!README.md
+!LICENSE
+!LICENSE.md
+
+# Ignore development/internal docs
+STRUCTURE.md
+STRUCTURE_COMPLETE.md
+REFACTORING_GUIDE.md
+REFACTORING_REPORT.md
+MIGRATION_TODO.md
+
+# ============================================================================
+# Test & Development Files
+# ============================================================================
+# Test files and scripts
+test_*.py
+*_test.py
+verify_*.py
+translate_comments.py
+
 # Test outputs
 repomix-output.xml
-verify_structure.py
-test_refactored.py
+*.test.json
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+.tox/
+
+# ============================================================================
+# Installer Output (if using Inno Setup)
+# ============================================================================
+installer_output/
+Output/
+*.exe
+!dist/*.exe
+
+# ============================================================================
+# Application-Specific
+# ============================================================================
+# Core module placeholder (reserved for future use)
+core/app.py
+
+# Backup files
+*.backup
+*_backup.*
+
+# ============================================================================
+# Security & Sensitive Data
+# ============================================================================
+# Never commit these
+*.key
+*.pem
+*.cert
+secrets.json
+.env
+.env.*
+
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================
